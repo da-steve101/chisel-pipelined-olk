@@ -1,4 +1,4 @@
-package OLK
+package OLK.AlphaCalc
 
 import Chisel._
 import FixedPoint._

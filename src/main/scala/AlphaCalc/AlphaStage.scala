@@ -1,4 +1,4 @@
-package OLK
+package OLK.AlphaCalc
 
 import Chisel._
 import FixedPoint._
@@ -17,6 +17,7 @@ import FixedPoint._
   input (-y - e) => (OLKn: 0, OLKc: 0,     OLKr: SFix)
   // Outputs
   output alpha => SFix  // Used for decision to add or not
+  output ft    => SFix  // Used for query outputs
   output addToDict => 1 bit
 
   Registers:
@@ -24,11 +25,13 @@ import FixedPoint._
   uAlphaReg     => SFix  (OLKc Only)
   addToDictReg  => 1 Bit (OLKr Only)
   forceNoAddReg => 1 Bit
+  ftReg         => SFix  (For Query results)
   
   Logic:
   forceNoAddReg = forceNoAdd
   ft = alphaReg*Zp + sum*(1/(1+r))
   ft_alt = sum + Wd
+  ftReg = (addToDict) ? ft : ft_alt
   -----------------
   alpha = alphaReg
   
