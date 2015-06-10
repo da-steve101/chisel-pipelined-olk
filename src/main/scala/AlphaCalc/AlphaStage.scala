@@ -56,10 +56,86 @@ import FixedPoint._
       --------------------------------------------------------
       addToDict = !forceNotAdd && (addToDictReg)
   */
-class AlphaStage extends Module {
+class AlphaStage(val bitWidth : Int, val intLength : Int, val olkType : Int) extends Module {
+  /**
+    olkType => 0 = OLKc, 1 = OLKn, 2 = OLKr
+    */
+  val io = new Bundle {
+    val zp     = SFix(intLength, bitWidth).asInput
+    val sum    = SFix(intLength, bitWidth).asInput
+    val wD     = SFix(intLength, bitWidth).asInput
+    val forceNA = Bool(INPUT)
+    val fracr  = SFix(intLength, bitWidth).asInput
+    val fracC  = SFix(intLength, bitWidth).asInput
+    val y    = Bool(INPUT) // OLKc only
+    val yepos = SFix(intLength, bitWidth).asInput // OLKr only
+    val yeneg = SFix(intLength, bitWidth).asInput // OLKr only
+    val alpha  = SFix(intLength, bitWidth).asOutput
+    val ft     = SFix(intLength, bitWidth).asOutput
+    val addToDict = Bool(OUTPUT)
+  }
+  // REGISTERS
+  val zero          = new SFix(intLength, SInt(0, width=bitWidth))
+  val alphaReg      = Reg(init=zero)
+  val uAlphaReg     = Reg(init=zero)  // OLKc Only
+  val addToDictReg  = Reg(init=Bool(false))        // OLKr Only
+  val forceNoAddReg = Reg(init=Bool(false))
+  val ftReg         = Reg(init=zero)  // For Query results
 
+  // LOGIC
+  forceNoAddReg := io.forceNA
+  val ft     = alphaReg*io.zp + io.sum*io.fracr
+  val ft_alt = io.sum + io.wD
+  when (io.addToDict) {
+    ftReg := ft
+  } .otherwise {
+    ftReg := ft_alt
+  }
+  io.alpha := alphaReg
+
+  if (olkType == 0) { // OLKc
+    val olkc = Module(new AlphaFunctOLKc(bitWidth, intLength))
+    when (io.addToDict) {
+      olkc.io.ft := ft
+    } .otherwise {
+      olkc.io.ft := ft_alt
+    }
+    olkc.io.y := io.y
+    olkc.io.fracr := io.fracr
+    olkc.io.fracC := io.fracC
+    uAlphaReg := olkc.io.Ualpha
+    alphaReg := olkc.io.alpha
+    io.addToDict  := (~forceNoAddReg) && (uAlphaReg > zero)
+  }
+  if (olkType == 1) { // OLKn
+    val olkn = Module(new AlphaFunctOLKn(bitWidth, intLength))
+    when (io.addToDict) {
+      olkn.io.ft := ft
+    } .otherwise {
+      olkn.io.ft := ft_alt
+    }
+    olkn.io.fracr := io.fracr
+    olkn.io.fracC := io.fracC
+    alphaReg := olkn.io.alpha
+    io.addToDict  := (~forceNoAddReg) && (alphaReg > zero)
+  }
+  if (olkType == 2) { // OLKr
+    val olkr = Module(new AlphaFunctOLKr(bitWidth, intLength))
+    when (io.addToDict) {
+      olkr.io.ft := ft
+    } .otherwise {
+      olkr.io.ft := ft_alt
+    }
+    olkr.io.yepos := io.yepos
+    olkr.io.yeneg := io.yeneg
+    olkr.io.fracr := io.fracr
+    olkr.io.fracC := io.fracC
+    alphaReg := olkr.io.alpha
+    addToDictReg  := olkr.io.addToDict
+    io.addToDict  := (~forceNoAddReg) && addToDictReg
+  }
 }
 
-class AlphaStage extends Tester(c) {
+class AlphaStageTester(c: AlphaStage) extends Tester(c) {
 
 }

@@ -26,10 +26,36 @@ import FixedPoint._
 
   out = alpha_2(ft) - alpha_1(ft)
   */
-class AlphaFunctOLKr extends Module {
+class AlphaFunctOLKr(val bitWidth : Int, val intLength : Int) extends Module {
+  val io = new Bundle {
+    val ft     = SFix(intLength, bitWidth).asInput
+    val yepos  = SFix(intLength, bitWidth).asInput
+    val yeneg  = SFix(intLength, bitWidth).asInput
+    val fracr  = SFix(intLength, bitWidth).asInput
+    val fracC  = SFix(intLength, bitWidth).asInput
+    val alpha  = SFix(intLength, bitWidth).asOutput
+    val addToDict = Bool(OUTPUT)
+  }
+  val alpha1_A = io.yepos - io.ft*io.fracr
+  val alpha2_A = io.yeneg + io.ft*io.fracr
+  val alpha1_B = alpha1_A
+  val alpha2_B = alpha2_A
+  val zero     = new SFix(intLength, SInt(0, width=bitWidth))
+  when (alpha1_A > io.fracC) {
+    alpha1_B := io.fracC
+  } .elsewhen (zero > alpha1_A) {
+    alpha1_B := zero
+  }
+  when (alpha2_A > io.fracC) {
+    alpha2_B := io.fracC
+  } .elsewhen (zero > alpha2_A ) {
+    alpha2_B := zero
+  }
+  io.addToDict := (alpha2_A > zero || alpha1_A > zero)
 
+  io.alpha := alpha2_B - alpha1_B
 }
 
-class AlphaFunctOLKrTests extends Tester(c) {
+class AlphaFunctOLKrTests(c: AlphaFunctOLKr) extends Tester(c) {
 
 }

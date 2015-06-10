@@ -17,10 +17,77 @@ import FixedPoint._
   alpha = alpha(ft)
   out = (y == 1) ? alpha(ft) : -alpha(ft)
   */
-class AlphaFunctOLKc extends Module {
-
+class AlphaFunctOLKc(val bitWidth : Int, val intLength : Int) extends Module {
+  val io = new Bundle {
+    val ft     = SFix(intLength, bitWidth).asInput
+    val y      = Bool(INPUT) // 1 = +1, 0 = -1
+    val fracr  = SFix(intLength, bitWidth).asInput
+    val fracC  = SFix(intLength, bitWidth).asInput
+    val Ualpha  = SFix(intLength, bitWidth).asOutput
+    val alpha  = SFix(intLength, bitWidth).asOutput
+  }
+  val one = new SFix(intLength, SInt(1 << (bitWidth - intLength),width=bitWidth))
+  val zero = new SFix(intLength, SInt(0,width=bitWidth))
+  val newAlpha_A = SFix(intLength, bitWidth)
+  val newAlpha_B = SFix(intLength, bitWidth)
+  val tmpMult =  SFix(intLength, bitWidth)
+  tmpMult := io.ft*io.fracr
+  newAlpha_A := one - tmpMult
+  newAlpha_B := one + tmpMult
+  val Ualpha_res = SFix(intLength, bitWidth)
+  Ualpha_res := zero
+  when (io.y) {
+    when (newAlpha_A > io.fracC) {
+      Ualpha_res :=  newAlpha_A
+    } .otherwise {
+      Ualpha_res :=  io.fracC
+    }
+  } .otherwise {
+    when (newAlpha_B > io.fracC) {
+      Ualpha_res :=  newAlpha_B
+    } .otherwise {
+      Ualpha_res :=  io.fracC
+    }
+  }
+  io.Ualpha := Ualpha_res
+  when (io.y) {
+    io.alpha := Ualpha_res
+  } .otherwise {
+    io.alpha := Ualpha_res
+  }
 }
 
-class AlphaFunctOLKcTests extends Tester(c) {
-
+class AlphaFunctOLKcTests(c: AlphaFunctOLKc) extends Tester(c) {
+  var ftAry = Array(BigInt(12), BigInt(256), BigInt(731))
+  var fracrAry = Array(BigInt(289), BigInt(173), BigInt(800))
+  var fracCAry = Array(BigInt(100), BigInt(512), BigInt(1024))
+  var yAry = Array(true, false)
+  for ( ft <- ftAry ) {
+    for ( fracr <- fracrAry ) {
+      for ( fracC <- fracCAry ) {
+        for ( y <- yAry ) {
+          poke(c.io.fracr.raw, fracr)
+          poke(c.io.y, Bool(y).litValue())
+          poke(c.io.fracC.raw, fracC)
+          poke(c.io.ft.raw, ft)
+          var alpha = BigInt(0)
+          var Ualpha = BigInt(0)
+          if (y) {
+            Ualpha = BigInt(1 << (c.bitWidth - c.intLength)) - ((ft*fracr) >> (c.bitWidth - c.intLength))
+            if (Ualpha > fracC)
+              Ualpha = fracC
+            alpha = Ualpha
+          }
+          else{
+            Ualpha = BigInt(1 << (c.bitWidth - c.intLength)) + ((ft*fracr) >> (c.bitWidth - c.intLength))
+            if (Ualpha > fracC)
+              Ualpha = fracC
+            alpha = -Ualpha
+          }
+          expect(c.io.alpha.raw, alpha)
+          expect(c.io.Ualpha.raw, Ualpha)
+        }
+      }
+    }
+  }
 }
