@@ -32,80 +32,80 @@ import OLK._
   sumL = SumL_(s-1)
   
   */
-class SumL(val bitWidth : Int, val intLength : Int, val stages : Int) extends Module {
-  val io = new Bundle {
-    val z      = Vec.fill(stages + 2){SFix(intLength, bitWidth).asInput}
-    val alpha  = SFix(intLength, bitWidth).asInput
-    val forget = SFix(intLength, bitWidth).asInput
-    val addToDict = Bool(INPUT)
+//class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int) extends Module {
+  //val io = new Bundle {
+    //val z      = Vec.fill(stages + 2){Fixed(INPUT, bitWidth, fracWidth)}
+    //val alpha  = Fixed(INPUT, bitWidth, fracWidth)
+    //val forget = Fixed(INPUT, bitWidth, fracWidth)
+    //val addToDict = Bool(INPUT)
 
-    val zp1    = SFix(intLength, bitWidth).asOutput
-    val zp     = SFix(intLength, bitWidth).asOutput
-    val sumL   = SFix(intLength, bitWidth).asOutput
-  }
-  assert(stages > 0)
-  val zero        = new SFix(intLength, SInt(0, width=bitWidth))
+    //val zp1    = Fixed(OUTPUT, bitWidth, fracWidth)
+    //val zp     = Fixed(OUTPUT, bitWidth, fracWidth)
+    //val sumL   = Fixed(OUTPUT, bitWidth, fracWidth)
+  //}
+  //assert(stages > 0)
+  //val zero        = Fixed(0, bitWidth, fracWidth)
 
-  // Registers
-  val stageAry = Array()
-  for (s <- 0 until stages) {
-    // Generate stage tree with one decreasing each stage
-    stageAry :+= Vec.fill(stages + 1 - s){Reg(init=zero)}
-  }
-  val sumLStages = Vec.fill(stages){Reg(init=zero)}
-  val sumLCalc   = Vec.fill(stages){zero}
+  //// Registers
+  //val stageAry = Array()
+  //for (s <- 0 until stages) {
+    //// Generate stage tree with one decreasing each stage
+    //stageAry :+= Vec.fill(stages + 1 - s){Reg(init=zero)}
+  //}
+  //val sumLStages = Vec.fill(stages){Reg(init=zero)}
+  //val sumLCalc   = Vec.fill(stages){zero}
 
-  // Forward all unused Z vals to next stage
-  for (s <- 0 until (stages + 1)) {
-    stageAry(0)(s) := io.z(s) // Get from inputs
-    for (a <- 1 until stages) {
-      if (s < (stages + 1 - a))
-        stageAry(a)(s) := stageAry(a - 1)(s)
-    }
-  }
-  io.zp  := stageAry(stages - 1)(0)
-  io.zp1 := stageAry(stages - 1)(1)
+  //// Forward all unused Z vals to next stage
+  //for (s <- 0 until (stages + 1)) {
+    //stageAry(0)(s) := io.z(s) // Get from inputs
+    //for (a <- 1 until stages) {
+      //if (s < (stages + 1 - a))
+        //stageAry(a)(s) := stageAry(a - 1)(s)
+    //}
+  //}
+  //io.zp  := stageAry(stages - 1)(0)
+  //io.zp1 := stageAry(stages - 1)(1)
 
-  // Calculate the sum if the example is added each cycle
-  sumLCalc(0) := io.alpha*io.z(stages + 1)
-  when (io.addToDict) {
-    sumLStages(0) := sumLCalc(0)
-  } .otherwise {
-    sumLStages(0) := zero
-  }
-  for (a <- 1 until stages) {
-    sumLCalc(a) := io.alpha*stageAry(a - 1)(stages + 1 - a) + io.forget*sumLStages(a - 1)
-    when (io.addToDict) {
-      sumLStages(a) := sumLCalc(a)
-    } .otherwise {
-      sumLStages(a) := sumLStages(a - 1)
-    }
-  }
-  io.sumL := sumLStages(stages - 1)
-}
+  //// Calculate the sum if the example is added each cycle
+  //sumLCalc(0) := io.alpha*io.z(stages + 1)
+  //when (io.addToDict) {
+    //sumLStages(0) := sumLCalc(0)
+  //} .otherwise {
+    //sumLStages(0) := zero
+  //}
+  //for (a <- 1 until stages) {
+    //sumLCalc(a) := io.alpha*stageAry(a - 1)(stages + 1 - a) + io.forget*sumLStages(a - 1)
+    //when (io.addToDict) {
+      //sumLStages(a) := sumLCalc(a)
+    //} .otherwise {
+      //sumLStages(a) := sumLStages(a - 1)
+    //}
+  //}
+  //io.sumL := sumLStages(stages - 1)
+//}
 
-class SumLTests(c : SumL) extends Tester(c) { 
-  poke(c.io.forget.raw, BigInt(1 << (c.bitWidth - c.intLength)))
-  poke(c.io.addToDict, Bool(false).litValue())
+//class SumLTests(c : SumL) extends Tester(c) { 
+  //poke(c.io.forget.raw, BigInt(1 << (c.bitWidth - c.fracWidth)))
+  //poke(c.io.addToDict, Bool(false).litValue())
 
-  val z = 1 << (c.bitWidth - c.intLength)
-  val alpha = 3 << (c.bitWidth - c.intLength - 2) // 0.75
-  val forget = 1 << (c.bitWidth - c.intLength - 1) // 0.5
+  //val z = 1 << (c.bitWidth - c.fracWidth)
+  //val alpha = 3 << (c.bitWidth - c.fracWidth - 2) // 0.75
+  //val forget = 1 << (c.bitWidth - c.fracWidth - 1) // 0.5
 
-  for (s <- 0 until (c.stages + 2))
-    poke(c.io.z(s).raw, BigInt(z))
+  //for (s <- 0 until (c.stages + 2))
+    //poke(c.io.z(s).raw, BigInt(z))
 
-  // Check that z and sum propogates
-  step(c.stages)
-  expect(c.io.zp1.raw, BigInt(z))
-  expect(c.io.zp.raw, BigInt(z))
-  expect(c.io.sumL.raw, BigInt(0))
+  //// Check that z and sum propogates
+  //step(c.stages)
+  //expect(c.io.zp1.raw, BigInt(z))
+  //expect(c.io.zp.raw, BigInt(z))
+  //expect(c.io.sumL.raw, BigInt(0))
 
-  // Check the sum is calculated properly
-  var sumL = BigInt(0)
-  for (s <- 0 until c.stages)
-    sumL = (sumL >> 1) + BigInt(alpha)
-  poke(c.io.addToDict, Bool(true).litValue())
-  step(c.stages)
-  expect(c.io.sumL.raw, sumL)
-}
+  //// Check the sum is calculated properly
+  //var sumL = BigInt(0)
+  //for (s <- 0 until c.stages)
+    //sumL = (sumL >> 1) + BigInt(alpha)
+  //poke(c.io.addToDict, Bool(true).litValue())
+  //step(c.stages)
+  //expect(c.io.sumL.raw, sumL)
+//}

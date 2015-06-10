@@ -7,12 +7,12 @@ import FixedPoint._
   This file computes the following 
 
   */
-class NORMAr(val bitWidth : Int, val intLength : Int) extends Module {
-  val io = new Bundle {
+//class NORMAr(val bitWidth : Int, val intLength : Int) extends Module {
+  //val io = new Bundle {
 
-  }
-}
+  //}
+//}
 
-class NORMArTests(c: NORMAr) extends Tester(c) {
+//class NORMArTests(c: NORMAr) extends Tester(c) {
 
-}
+//}

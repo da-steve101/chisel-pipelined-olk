@@ -1,7 +1,7 @@
 package OLK.AlphaCalc
 
 import Chisel._
-import FixedPoint._
+import cla.types._
 
 /** AlphaFunctOLKn
   This file computes the following:
@@ -14,18 +14,16 @@ import FixedPoint._
      alpha(ft) = C/(1+r)
   out = alpha(ft)
   */
-class AlphaFunctOLKn(val bitWidth : Int, val intLength : Int) extends Module {
+class AlphaFunctOLKn(val bitWidth : Int, val fracWidth : Int) extends Module {
   val io = new Bundle {
-    val ft     = SFix(intLength, bitWidth).asInput
-    val fracr  = SFix(intLength, bitWidth).asInput
-    val fracC  = SFix(intLength, bitWidth).asInput
-    val alpha  = SFix(intLength, bitWidth).asOutput
+    val ft     = Fixed(INPUT, bitWidth, fracWidth)
+    val fracr  = Fixed(INPUT, bitWidth, fracWidth)
+    val fracC  = Fixed(INPUT, bitWidth, fracWidth)
+    val alpha  = Fixed(OUTPUT, bitWidth, fracWidth)
   }
-  val one = new SFix(intLength, SInt(1 << (bitWidth - intLength),width=bitWidth))
-  val newAlpha = SFix(intLength, bitWidth)
-  val tmpMult =  SFix(intLength, bitWidth)
-  tmpMult := io.ft*io.fracr
-  newAlpha := one - tmpMult
+  val one = Fixed(1, bitWidth, fracWidth)
+  val tmpMult = io.ft*io.fracr
+  val newAlpha = one - tmpMult
   when (newAlpha > io.fracC) {
     io.alpha := io.fracC
   } .otherwise {
@@ -40,14 +38,14 @@ class AlphaFunctOLKnTests(c: AlphaFunctOLKn) extends Tester(c) {
   for ( ft <- ftAry ) {
     for ( fracr <- fracrAry ) {
       for ( fracC <- fracCAry ) {
-        poke(c.io.fracr.raw, fracr)
-        poke(c.io.fracC.raw, fracC)
-        poke(c.io.ft.raw, ft)
-        val alpha = (1 << (bitWidth - intLength)) - ((ft*fracr) >> (bitWidth - intLength))
+        poke(c.io.fracr, fracr)
+        poke(c.io.fracC, fracC)
+        poke(c.io.ft, ft)
+        val alpha = (1 << (c.bitWidth - c.fracWidth)) - ((ft*fracr) >> (c.bitWidth - c.fracWidth))
         if (alpha > fracC)
-          expect(c.io.alpha.raw, fracC)
+          expect(c.io.alpha, fracC)
         else
-          expect(c.io.alpha.raw, alpha)
+          expect(c.io.alpha, alpha)
       }
     }
   }

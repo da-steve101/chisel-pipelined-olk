@@ -2,6 +2,7 @@ package OLK.Sum
 
 import Chisel._
 import OLK._
+import cla.types._
 
 /** SumR
   This function sums the results of the kernel function
@@ -47,3 +48,42 @@ import OLK._
   wD   = Spare_(s-1)[1]
   q    = QReg_(s-1)
   */
+
+class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, val numStages : Int) extends Module {
+    val lnOf2 = scala.math.log(2)
+    def log2(x : Int) : Int = (scala.math.log(x.toDouble) / lnOf2).toInt
+    def log2(x : Double) : Int = (scala.math.log(x) / lnOf2).toInt
+    
+    val io = new Bundle {
+        val vi  = Vec.fill(dictionarySize){Fixed(INPUT, bitWidth, fracWidth)}
+        val alphai = Vec.fill(dictionarySize){Fixed(INPUT, bitWidth, fracWidth)}
+        val addToDict = Bool(INPUT)
+
+        val sumR = Fixed(OUTPUT, bitWidth, fracWidth)
+        val wD = Fixed(OUTPUT, bitWidth, fracWidth)
+        val wD1 = Fixed(OUTPUT, bitWidth, fracWidth)
+        val q = UInt(OUTPUT, width=log2(numStages))
+    }
+
+    /**
+     * Initial Implementation
+    */
+    
+    io.sumR := io.vi.reduceLeft(_ + _)
+}
+
+class SumRTests(c : SumR) extends Tester(c) {
+    def toFixed(x : Double, fracWidth : Int) : BigInt = BigInt(scala.math.round(x*scala.math.pow(2, fracWidth)))
+    def toFixed(x : Float, fracWidth : Int) : BigInt = BigInt(scala.math.round(x*scala.math.pow(2, fracWidth)))
+    def toFixed(x : Int, fracWidth : Int) : BigInt = BigInt(scala.math.round(x*scala.math.pow(2, fracWidth)))
+    val r = scala.util.Random
+
+    for (i <- 0 to 10) {
+        val inVI = Array.fill(c.dictionarySize){r.nextInt(scala.math.pow(2, (c.bitWidth - c.fracWidth)/2).toInt) * r.nextFloat()}
+        for (i <- 0 until c.dictionarySize) {
+            var fixedVI = toFixed(inVI(i), c.fracWidth)
+            poke(c.io.vi(i), fixedVI)
+        }
+        expect(c.io.sumR, toFixed(inVI.reduceLeft(_+_), c.fracWidth))
+    }
+}
