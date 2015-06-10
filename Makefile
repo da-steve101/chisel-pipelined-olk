@@ -28,6 +28,7 @@ all: emulator verilog # dreamer
 clean:
 	-rm -f *.h *.hex *.flo *.cpp *.o *.out *.v *.vcd $(executables)
 	-rm -rf project/target/ target/
+	-rm -rf ~/.sbt/0.13/staging/*
 
 emulator: $(outs)
 
