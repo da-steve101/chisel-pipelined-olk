@@ -30,8 +30,9 @@ import FixedPoint._
   rhoNew = (addToDict) ? rhoAdded : rhoNotAdded
   
   */
-class NORMAc(val bitWidth : Int, val intLength : Int) extends Module {
-
+class NORMAc(val bitWidth : Int, val fracWidth : Int) extends Module {
+  val io = new Bundle {
+  }
 }
 
 class NORMAcTests(c: NORMAc) extends Tester(c) {
