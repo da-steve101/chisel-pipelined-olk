@@ -1,20 +1,21 @@
 package OLK.Sum
 
 import Chisel._
-import OLK._
+import scala.collection.mutable.ArrayBuffer
+import cla.types._
 
 /** SumL
   This block sums the stages in the pipeline
   parameter s : stages
   
-  input z_i => SFix[s+1]
-  input alpha => SFix
+  input z_i => Fixed[s+1]
+  input alpha => Fixed
   input 1/(1+r) => Constant
   input addToDict => 1 Bit
   
-  output z_p1 => SFix
-  output zp   => SFix
-  output sumL => SFix
+  output z_p1 => Fixed
+  output zp   => Fixed
+  output sumL => Fixed
   
   Registers:
   Stage_0[s+1], Stage_1[s], ... Stage_(s-1)[2]
@@ -32,25 +33,25 @@ import OLK._
   sumL = SumL_(s-1)
   
   */
-class SumL(val bitWidth : Int, val intLength : Int, val stages : Int) extends Module {
+class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int) extends Module {
   val io = new Bundle {
-    val z      = Vec.fill(stages + 2){SFix(intLength, bitWidth).asInput}
-    val alpha  = SFix(intLength, bitWidth).asInput
-    val forget = SFix(intLength, bitWidth).asInput
+    val z      = Vec.fill(stages + 2){Fixed(INPUT, bitWidth, fracWidth)}
+    val alpha  = Fixed(INPUT, bitWidth, fracWidth)
+    val forget = Fixed(INPUT, bitWidth, fracWidth)
     val addToDict = Bool(INPUT)
 
-    val zp1    = SFix(intLength, bitWidth).asOutput
-    val zp     = SFix(intLength, bitWidth).asOutput
-    val sumL   = SFix(intLength, bitWidth).asOutput
+    val zp1    = Fixed(OUTPUT, bitWidth, fracWidth)
+    val zp     = Fixed(OUTPUT, bitWidth, fracWidth)
+    val sumL   = Fixed(OUTPUT, bitWidth, fracWidth)
   }
-  assert(stages > 0)
-  val zero        = new SFix(intLength, SInt(0, width=bitWidth))
+  assert(Bool(stages > 0), "Must have atleast one sum stage")
+  val zero        = Fixed(0.0, bitWidth, fracWidth)
 
   // Registers
-  val stageAry = Array()
+  val stageAry = new ArrayBuffer[Vec[Fixed]]()
   for (s <- 0 until stages) {
     // Generate stage tree with one decreasing each stage
-    stageAry :+= Vec.fill(stages + 1 - s){Reg(init=zero)}
+    stageAry += Vec.fill(stages + 1 - s){Reg(init=zero)}
   }
   val sumLStages = Vec.fill(stages){Reg(init=zero)}
   val sumLCalc   = Vec.fill(stages){zero}
@@ -85,21 +86,21 @@ class SumL(val bitWidth : Int, val intLength : Int, val stages : Int) extends Mo
 }
 
 class SumLTests(c : SumL) extends Tester(c) { 
-  poke(c.io.forget.raw, BigInt(1 << (c.bitWidth - c.intLength)))
+  poke(c.io.forget, BigInt(1 << (c.fracWidth)))
   poke(c.io.addToDict, Bool(false).litValue())
 
-  val z = 1 << (c.bitWidth - c.intLength)
-  val alpha = 3 << (c.bitWidth - c.intLength - 2) // 0.75
-  val forget = 1 << (c.bitWidth - c.intLength - 1) // 0.5
+  val z = 1 << (c.fracWidth)
+  val alpha = 3 << (c.fracWidth - 2) // 0.75
+  val forget = 1 << (c.fracWidth - 1) // 0.5
 
   for (s <- 0 until (c.stages + 2))
-    poke(c.io.z(s).raw, BigInt(z))
+    poke(c.io.z(s), BigInt(z))
 
   // Check that z and sum propogates
   step(c.stages)
-  expect(c.io.zp1.raw, BigInt(z))
-  expect(c.io.zp.raw, BigInt(z))
-  expect(c.io.sumL.raw, BigInt(0))
+  expect(c.io.zp1, BigInt(z))
+  expect(c.io.zp, BigInt(z))
+  expect(c.io.sumL, BigInt(0))
 
   // Check the sum is calculated properly
   var sumL = BigInt(0)
@@ -107,5 +108,5 @@ class SumLTests(c : SumL) extends Tester(c) {
     sumL = (sumL >> 1) + BigInt(alpha)
   poke(c.io.addToDict, Bool(true).litValue())
   step(c.stages)
-  expect(c.io.sumL.raw, sumL)
+  expect(c.io.sumL, sumL)
 }
