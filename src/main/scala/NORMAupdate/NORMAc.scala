@@ -42,6 +42,7 @@ class NORMAc(val bitWidth : Int, val fracWidth : Int) extends Module {
     val etanu1 = Fixed(INPUT, bitWidth, fracWidth) // = -eta*(1-nu)
 
     val addToDict = Bool(OUTPUT)
+    val sign      = Bool(OUTPUT)
     val bNew      = Fixed(OUTPUT, bitWidth, fracWidth)
     val rhoNew    = Fixed(OUTPUT, bitWidth, fracWidth)
   }
@@ -62,6 +63,7 @@ class NORMAc(val bitWidth : Int, val fracWidth : Int) extends Module {
     io.addToDict := Bool(false)
     io.rhoNew := rhoNotAdded
   }
+  io.sign := io.y
 }
 
 class NORMAcTests(c: NORMAc) extends Tester(c) {
