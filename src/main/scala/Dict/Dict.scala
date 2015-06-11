@@ -1,6 +1,7 @@
 package OLK.Dict
 
 import Chisel._
+import scala.collection.mutable.ArrayBuffer
 import cla.types._
 
 /** Dict
@@ -33,7 +34,7 @@ import cla.types._
   currentDict = dict
   */
 class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
-           val features : Int, val pipelineStages : Int) extends Module {
+  val features : Int, val pipelineStages : Int, val isNORMA : Boolean) extends Module {
   val io = new Bundle {
     val alpha     = Fixed(INPUT, bitWidth, fracWidth)
     val forget    = Fixed(INPUT, bitWidth, fracWidth)
@@ -49,6 +50,9 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
   val pipelinedEx = Vec.fill(pipelineStages){Vec.fill(features){Reg(init=Fixed(0.0, bitWidth, fracWidth))}}
   val dict        = Vec.fill(dictSize){Vec.fill(features){Reg(init=Fixed(0.0, bitWidth, fracWidth))}}
   val weights     = Vec.fill(dictSize){Reg(init=Fixed(0.0, bitWidth, fracWidth))}
+  val forgetWeights = new ArrayBuffer[Fixed]()
+  for (d <- 0 until dictSize)
+    forgetWeights += io.forget*weights(d)
 
   for (f <- 0 until features) {
     for (p <- 0 until pipelineStages)
@@ -79,15 +83,20 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
   when (io.addToDict) {
     weights(0) := io.alpha
   } .otherwise {
-    weights(0) := weights(0)
+    if (isNORMA)
+      weights(0) := forgetWeights(0)
+    else
+      weights(0) := weights(0)
   }
 
   for (d <- 0 until (dictSize - 1)) {
-    val forgetWeights = io.forget*weights(d)
     when (io.addToDict) {
-      weights(d+1) := forgetWeights
+      weights(d+1) := forgetWeights(d)
     } .otherwise {
-      weights(d+1) := weights(d+1)
+      if (isNORMA)
+        weights(d+1) := forgetWeights(d+1)
+      else
+        weights(d+1) := weights(d+1)
     }
   }
 }
@@ -116,15 +125,17 @@ class DictTests(c : Dict) extends Tester(c) {
   poke(c.io.addToDict, Bool(true).litValue())
   for (p <- 0 until c.pipelineStages) {
     var pVal = p
-    if (p == (c.pipelineStages - 1)) {
+    if (p > (c.pipelineStages - 4)) {
       // in the last case test if the example is not added
       poke(c.io.addToDict, Bool(false).litValue())
-      pVal = (c.pipelineStages - 2)
+      pVal = (c.pipelineStages - 4)
     }
     step(1)
     for (d <- 0 until (pVal+1)) {
       // Check weights
-      val alphai = (one >> d)
+      var alphai = (one >> d)
+      if (p > pVal && c.isNORMA)
+        alphai = (alphai >> (p - pVal))
       expect(c.io.currentAlpha(d), alphai)
       // Check dictionary
       val x = (one + BigInt(pVal - d))
