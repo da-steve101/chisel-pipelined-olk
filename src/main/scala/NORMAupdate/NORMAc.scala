@@ -48,7 +48,7 @@ class NORMAc(val bitWidth : Int, val fracWidth : Int) extends Module {
 
   val rhoAdded = io.rhoOld + io.etanu1
   val rhoNotAdded = io.rhoOld + io.etanu
-  // Mux(y, y == 0, y == 1)
+  // Mux(y>0, y = 1, y = -1)
   val bAdded = Mux(io.y, io.bOld + io.etapos, io.bOld + io.etaneg)
   val gt = io.ft + io.bOld
   val testCond = Mux(io.y, io.rhoOld - gt, io.rhoOld + gt)
