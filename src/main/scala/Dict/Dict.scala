@@ -125,10 +125,7 @@ class DictTests(c : Dict) extends Tester(c) {
     for (d <- 0 until (pVal+1)) {
       // Check weights
       val alphai = (one >> d)
-      if (d >= c.fracWidth)
-        expect(c.io.currentAlpha(d), BigInt(1))
-      else
-        expect(c.io.currentAlpha(d), alphai)
+      expect(c.io.currentAlpha(d), alphai)
       // Check dictionary
       val x = (one + BigInt(pVal - d))
       for (f <- 0 until c.features) {
