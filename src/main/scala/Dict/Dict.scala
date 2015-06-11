@@ -49,7 +49,6 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
   val pipelinedEx = Vec.fill(pipelineStages){Vec.fill(features){Reg(init=Fixed(0.0, bitWidth, fracWidth))}}
   val dict        = Vec.fill(dictSize){Vec.fill(features){Reg(init=Fixed(0.0, bitWidth, fracWidth))}}
   val weights     = Vec.fill(dictSize){Reg(init=Fixed(0.0, bitWidth, fracWidth))}
-  val forgetWeights = Vec.fill(dictSize - 1){Fixed(0.0, bitWidth, fracWidth)}
 
   for (f <- 0 until features) {
     for (p <- 0 until pipelineStages)
@@ -84,9 +83,9 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
   }
 
   for (d <- 0 until (dictSize - 1)) {
-    forgetWeights(d) := io.forget*weights(d)
+    val forgetWeights = io.forget*weights(d)
     when (io.addToDict) {
-      weights(d+1) := forgetWeights(d)
+      weights(d+1) := forgetWeights
     } .otherwise {
       weights(d+1) := weights(d+1)
     }
@@ -105,7 +104,7 @@ class DictTests(c : Dict) extends Tester(c) {
     step(1)
     for (p2 <- 0 until c.pipelineStages) {
       var x = zero
-      if (p2 < p)
+      if (p2 <= p)
         x = one  + BigInt(p - p2)
       for (f <- 0 until c.features)
         expect(c.io.currentPipeline(p2)(f), x)
@@ -115,7 +114,6 @@ class DictTests(c : Dict) extends Tester(c) {
   poke(c.io.alpha, one)      // 1
   poke(c.io.forget, one/2) // 0.5
   poke(c.io.addToDict, Bool(true).litValue())
-  step(1)
   for (p <- 0 until c.pipelineStages) {
     var pVal = p
     if (p == (c.pipelineStages - 1)) {
@@ -123,16 +121,19 @@ class DictTests(c : Dict) extends Tester(c) {
       poke(c.io.addToDict, Bool(false).litValue())
       pVal = (c.pipelineStages - 2)
     }
+    step(1)
     for (d <- 0 until (pVal+1)) {
       // Check weights
       val alphai = (one >> d)
-      expect(c.io.currentAlpha(d), alphai)
+      if (d >= c.fracWidth)
+        expect(c.io.currentAlpha(d), BigInt(1))
+      else
+        expect(c.io.currentAlpha(d), alphai)
       // Check dictionary
+      val x = (one + BigInt(pVal - d))
       for (f <- 0 until c.features) {
-        val x = (one + BigInt(pVal + 1 - d)) >> d
         expect(c.io.currentDict(d)(f), x)
       }
     }
-    step(1)
   }
 }
