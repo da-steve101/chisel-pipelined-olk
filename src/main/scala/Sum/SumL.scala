@@ -33,18 +33,20 @@ import cla.types._
   sumL = SumL_(s-1)
   
   */
-class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int) extends Module {
+class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int, val isNORMA : Boolean) extends Module {
+  Predef.assert(stages > 0, "There must be atleast one stage")
   val io = new Bundle {
     val z      = Vec.fill(stages + 2){Fixed(INPUT, bitWidth, fracWidth)}
     val alpha  = Fixed(INPUT, bitWidth, fracWidth)
     val forget = Fixed(INPUT, bitWidth, fracWidth)
     val addToDict = Bool(INPUT)
 
+    val forgetPowQ  = Fixed(OUTPUT, bitWidth, fracWidth)
+    val forgetPowQ1 = Fixed(OUTPUT, bitWidth, fracWidth)
     val zp1    = Fixed(OUTPUT, bitWidth, fracWidth)
     val zp     = Fixed(OUTPUT, bitWidth, fracWidth)
     val sumL   = Fixed(OUTPUT, bitWidth, fracWidth)
   }
-  assert(Bool(stages > 0), "Must have atleast one sum stage")
   val zero        = Fixed(0.0, bitWidth, fracWidth)
 
   // Registers
@@ -55,6 +57,26 @@ class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int) extends Mo
   }
   val sumLStages = Vec.fill(stages){Reg(init=zero)}
   val sumLCalc   = Vec.fill(stages){zero}
+  val forgetPow  = Vec.fill(stages - 1){Reg(init=zero)}
+  val forgetPowSq = Reg(init=zero)
+  val forgetPowQ  = Reg(init=zero)
+  val forgetPowQ1 = Reg(init=zero)
+  forgetPowSq    := io.forget*io.forget
+  if (isNORMA) {
+    io.forgetPowQ  := io.forget*forgetPow(stages -2)
+    io.forgetPowQ1 := forgetPowSq*forgetPow(stages -2)
+    forgetPow(0)   := io.forget
+    for (s <- 1 until (stages - 1)) {
+      forgetPow(s) := io.forget*forgetPow(s - 1)
+    }
+  } else {
+    io.forgetPowQ  := Mux(io.addToDict, io.forget*forgetPow(stages -2), forgetPow(stages - 2))
+    io.forgetPowQ1 := Mux(io.addToDict, forgetPowSq*forgetPow(stages -2), forgetPow(stages - 2))
+    forgetPow(0)   := Mux(io.addToDict, io.forget, Fixed(1.0, bitWidth, fracWidth))
+    for (s <- 1 until (stages - 1)) {
+      forgetPow(s) := Mux(io.addToDict, io.forget*forgetPow(s - 1), forgetPow(s - 1))
+    }
+  }
 
   // Forward all unused Z vals to next stage
   for (s <- 0 until (stages + 1)) {
