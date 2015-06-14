@@ -115,16 +115,7 @@ class L2NormTests(c : L2Norm) extends Tester(c) {
   for (i <- 0 until (c.stages.length - 1))
     noStages = { if (c.stages(i)) { noStages + 1 } else { noStages } }
 
-  val offsets = new ArrayBuffer[Int]()
-  offsets += 0
-  for (s <- 0 until c.stages.length) {
-    if (c.stages(s))
-      offsets += (offsets.last + 1)
-    else
-      offsets += offsets.last
-  }
-
-  val cycles = 5*noStages
+  val cycles = 10*noStages
 
   val expectResult = ArrayBuffer.fill(noStages)(0)
   val subRes = new ArrayBuffer[ArrayBuffer[Int]]()
@@ -152,7 +143,7 @@ class L2NormTests(c : L2Norm) extends Tester(c) {
     val subalt = ArrayBuffer.fill(c.features)(r.nextInt(1 << (c.bitWidth/2)))
     val sqralt = ArrayBuffer.fill(c.features)(r.nextInt(1 << (c.bitWidth/2)))
     val adderalt  = ArrayBuffer.fill((1 << c.log2Features) - 1){r.nextInt(1 << (c.bitWidth/2))}
-    val addToDict = false //(r.nextInt(2) == 1)
+    val addToDict = (r.nextInt(2) == 1)
     poke(c.io.addToDict, Bool(addToDict).litValue())
     for (i <- 0 until adderalt.length)
       poke(c.io.adderalt(i), BigInt(adderalt(i)))
@@ -186,30 +177,45 @@ class L2NormTests(c : L2Norm) extends Tester(c) {
       sqrRes += sqrary
       expectResult += sum
     }
-    if (addToDict) // c.stages(end) forced true in implementation
-      expectResult(cyc + 1) = adderalt((1 << c.log2Features) - 2)
-
-    for (stage <- 0 until c.log2Features) {
-      val adderFeatures = new ArrayBuffer[Int]()
-      for (f <- 0 until (1 << (c.log2Features - 1 - stage))) {
-        if (stage == 0) {
-          if (addToDict) {
-            // TODO: change adderRes based on new alt inputs
-            adderFeatures += (sqrRes(cyc)(2*f) + sqrRes(cyc)(2*f + 1))
-          } else {
-            adderFeatures += (sqrRes(cyc)(2*f) + sqrRes(cyc)(2*f + 1))
-          }
-        }
-        else {
-          if (addToDict) {
-            // TODO: change adderRes based on new alt inputs
-            adderFeatures += (adderRes(stage - 1)(cyc)(2*f) + adderRes(stage - 1)(cyc)(2*f + 1))
-          }
-          else {
-            adderFeatures += (adderRes(stage - 1)(cyc)(2*f) + adderRes(stage - 1)(cyc)(2*f + 1))
-          }
+    if (addToDict) {
+      // the last cycle has been added, correct the next ones for the sum
+      // c.stages(end) forced true in implementation
+      var tmpCyc = 0
+      for (i <- 0 until (c.stages.length - 2)){
+        if (c.stages(c.stages.length - 1 - i)) {
+          var adderaltSum = 0
+          for (j <- ((1 << i) - 1) until ((1 << (i+1)) - 1))
+            adderaltSum += adderalt(adderalt.length - 1 - j)
+          expectResult(cyc + 1 + tmpCyc) = adderaltSum
+          tmpCyc += 1
         }
       }
+      if (c.stages(1))
+        expectResult(cyc + 1 + tmpCyc) = sqralt.sum
+    }
+
+    var adderStageCumSum = 0
+    for (stage <- 0 until c.log2Features) {
+      val adderFeatures = new ArrayBuffer[Int]()
+      val adderStageSize = 1 << (c.log2Features - 1 - stage) 
+      for (f <- 0 until adderStageSize) {
+        if (stage == 0) {
+          if (addToDict && c.stages(1)) {
+            // change adderRes based on new alt inputs
+            adderFeatures += (sqralt(2*f) + sqralt(2*f + 1))
+          } else
+            adderFeatures += (sqrRes(cyc)(2*f) + sqrRes(cyc)(2*f + 1))
+        }
+        else {
+          if (addToDict && c.stages(stage + 1)) {
+            // change adderRes based on new alt inputs
+            adderFeatures += (adderalt(2*f + adderStageCumSum) + adderalt(2*f + adderStageCumSum + 1))
+          } else
+            adderFeatures += (adderRes(stage - 1)(cyc)(2*f) + adderRes(stage - 1)(cyc)(2*f + 1))
+        }
+      }
+      if (stage != 0)
+        adderStageCumSum += 2*adderStageSize
       // add the result to the next cycle
       adderRes(stage) += adderFeatures
     }
