@@ -80,19 +80,20 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   val increment   = 1.0 / (1 << (fracWidth - log2Table))
   val tableEnd    = 1.0
   var x = 0.0
+  // NOTE: x is positive, therefore gradient is negitive
   while (x < tableEnd) {
     // m = (y1 - y2)/(x1 - x2)
-    val m = (scala.math.pow(2, - x) - scala.math.pow(2,- x - increment))/increment
+    val m = -(scala.math.pow(2, - x) - scala.math.pow(2,- x - increment))/increment
     // convert to Fixed
     gradients += (m  * (1 << fracWidth)).toInt 
-    // b = y1 + m*(-x1)
-    val b = scala.math.pow(2, - x) + m*x
+    // b = y1 - m*x1
+    val b = scala.math.pow(2, - x) - m*x
     // convert to Fixed
     offsets += (b * (1 << fracWidth)).toInt
     x += increment
   }
 
-  // TODO: create Lookup Tables gradTable(lookupTableSize) and offsetTable(lookupTableSize)
+  // TODO: create Lookup Tables gradTable(gradients) and offsetTable(offsets)
 
   // multiply gamma*x
   val xValOut = io.gamma*io.x
@@ -129,7 +130,7 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   io.xint1Out := x_int1
   val mxVal     = optional(stages(2), io.gradAlt, gradOut)
   val offValReg = optional(stages(2), io.offAlt,  offOut)
-  val x_int2    = optional_UInt(stages(2),  io.xint1Alt,  x_int1)
+  val x_int2    = optional_UInt(stages(2), io.xint1Alt, x_int1)
 
   // END OF STAGE 2
 
@@ -138,14 +139,14 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   io.yFracOut := yFracOut
   io.xint2Out := x_int2
   val yFrac         = optional(stages(3), io.yFracAlt, yFracOut)
-  val x_int_delayed = optional_UInt(stages(3), io.xint2Alt,  x_int2)
+  val x_int_delayed = optional_UInt(stages(3), io.xint2Alt, x_int2)
 
   // END OF STAGE 3
 
   // calculate y >> x_int
-  val yOut = yFrac >> x_int_delayed
+  val yOut = (yFrac >> x_int_delayed)
   io.yOut := yOut
-  val y      = optional(stages(4), io.yAlt, yOut)
+  val y    = optional(stages(4), io.yAlt, yOut)
 
   // return y
   io.y := y
@@ -166,35 +167,35 @@ class Pow2Tests(c : Pow2) extends Tester(c) {
   val yAry          = new ArrayBuffer[Int]()
 
   // Fill stages enabled with a 0 to account for Reg delay
-  if ( c.stages(0) )
-    xValOutAry += 0
-  if ( c.stages(1) ) {
+  if ( c.stages(0) ) {
     gradTabOutAry += 0
     offTabOutAry  += 0
     xintOutAry    += 0
     xFracOutAry   += 0
   }
-  if ( c.stages(2) ) {
+  if ( c.stages(1) ) {
     gradOutAry  += 0
     xint1OutAry += 0
     offOutAry   += 0
   }
-  if ( c.stages(3) ) {
+  if ( c.stages(2) ) {
     yFracOutAry += 0
     xint2OutAry += 0
   }
-  if ( c.stages(4) )
+  if ( c.stages(3) )
     yOutAry += 0
+  if ( c.stages(4) )
+    yAry += 0
 
   val cycles = 20
   val r = scala.util.Random
 
   for ( cyc <- 0 until cycles ) {
     // generate random inputs
-    val x          = r.nextInt(1 << (c.bitWidth - 3))
-    val gamma      = r.nextInt(1 << (c.bitWidth - 3))
+    val x          = r.nextInt(1 << (c.bitWidth/2))
+    val gamma      = r.nextInt(1 << (c.bitWidth/2))
     val addToDict  = (r.nextInt(2) == 1)
-    val xValAlt    = r.nextInt(1 << (c.bitWidth - 3))
+    val xValAlt    = r.nextInt(1 << (c.bitWidth/2))
     val xintAlt    = r.nextInt(1 << ((c.bitWidth - c.fracWidth)/2))
     val xFracAlt   = r.nextInt(1 << ((c.bitWidth - c.fracWidth)/2))
     val gradTabAlt = r.nextInt(1 << (c.bitWidth/2))
@@ -220,97 +221,102 @@ class Pow2Tests(c : Pow2) extends Tester(c) {
     poke(c.io.yFracAlt,   BigInt(yFracAlt))
     poke(c.io.yAlt,       BigInt(yAlt))
 
-
-    xValOutAry += {
-      if ( c.stages(0) && addToDict ){
-        xValAlt
-      } else {
-        ((gamma*x) >> c.fracWidth)
-      } }
+    xValOutAry += ((gamma*x) >> c.fracWidth)
 
     // calculate what the values should be
     val xIndex = ((xValOutAry(cyc).toDouble /(1 << c.fracWidth))/c.increment).floor
     val xDub   = xIndex*c.increment
+    val xIndexAlt = ((xValAlt.toDouble /(1 << c.fracWidth))/c.increment).floor
+    val xDubAlt   = xIndexAlt*c.increment
 
     // m = (y1 - y2)/(x1 - x2)
-    val m = (((scala.math.pow(2, - xDub) - scala.math.pow(2,- xDub - c.increment))/c.increment) * (1 << c.fracWidth)).toInt
-    // b = y1 + m*(-x1)
-    val b = (( scala.math.pow(2, - xDub) + m*xDub) * (1 << c.fracWidth)).toInt
+    val m    = ((-(scala.math.pow(2, - xDub) - scala.math.pow(2,- xDub - c.increment))/c.increment) * (1 << c.fracWidth)).toInt
+    val mAlt = ((-(scala.math.pow(2, - xDubAlt) - scala.math.pow(2,- xDubAlt - c.increment))/c.increment) * (1 << c.fracWidth)).toInt
+    // b = y1 - m*x1
+    val b    = (( scala.math.pow(2, - xDub) - m*xDub) * (1 << c.fracWidth)).toInt
+    val bAlt = (( scala.math.pow(2, - xDubAlt) - mAlt*xDubAlt) * (1 << c.fracWidth)).toInt
 
     xintOutAry += {
-      if ( c.stages(1) && addToDict) {
-        xintAlt
+      if ( c.stages(0) && addToDict) {
+        (xValAlt & ((1 << c.bitWidth) - (1 << c.fracWidth))) >> c.fracWidth
       } else {
         (xValOutAry(cyc) & ((1 << c.bitWidth) - (1 << c.fracWidth))) >> c.fracWidth
       }
     }
     xFracOutAry += {
-      if ( c.stages(1) && addToDict) {
-        xFracAlt
+      if ( c.stages(0) && addToDict) {
+        (xValAlt & ((1 << c.bitWidth) - (1 << c.fracWidth))) >> c.fracWidth
       } else {
         xValOutAry(cyc) & ((1 << c.fracWidth) - 1)
       }
     }
     gradTabOutAry += {
-      if ( c.stages(1) && addToDict) {
-        gradTabAlt
+      if ( c.stages(0) && addToDict) {
+        mAlt
       } else {
         m
       }
     }
     offTabOutAry += {
-      if ( c.stages(1) && addToDict) {
-        offTabAlt
+      if ( c.stages(0) && addToDict) {
+        bAlt
       } else {
         b
       }
     }
 
     xint1OutAry += {
-      if ( c.stages(2) && addToDict) {
-        xint1Alt
+      if ( c.stages(1) && addToDict) {
+        xintAlt
       } else {
         xintOutAry(cyc)
       }
     }
     gradOutAry += {
-      if ( c.stages(2) && addToDict) {
-        gradAlt
+      if ( c.stages(1) && addToDict) {
+        (gradTabAlt*xFracOutAry(cyc)) >> c.fracWidth
       } else {
-        gradTabOutAry(cyc)*xFracOutAry(cyc)
+        (gradTabOutAry(cyc)*xFracOutAry(cyc)) >> c.fracWidth
       }
     }
     offOutAry += {
-      if ( c.stages(2) && addToDict) {
-        offAlt
+      if ( c.stages(1) && addToDict) {
+        offTabAlt
       } else {
         offTabOutAry(cyc)
       }
     }
 
     xint2OutAry += {
-      if ( c.stages(3) && addToDict) {
-        xint2Alt
+      if ( c.stages(2) && addToDict) {
+        xint1Alt
       } else {
         xint1OutAry(cyc)
       }
     }
     yFracOutAry += {
-      if ( c.stages(3) && addToDict) {
-        yFracAlt
+      if ( c.stages(2) && addToDict) {
+        gradAlt + offAlt
       } else {
-        gradTabOutAry(cyc) + offTabOutAry(cyc)
+        gradOutAry(cyc) + offOutAry(cyc)
       }
     }
 
     yOutAry += {
+      if ( c.stages(3) && addToDict) {
+        yFracAlt >> xint2Alt
+      } else {
+        yFracOutAry(cyc) >> xint2OutAry(cyc)
+      }
+    }
+
+    yAry += {
       if ( c.stages(4) && addToDict) {
         yAlt
       } else {
-        yFracOutAry(cyc) >> xintOutAry(cyc)
+        yOutAry(cyc)
       }
     }
-    yAry += yOutAry(cyc)
 
     expect(c.io.xValOut, BigInt(xValOutAry(cyc)))
     expect(c.io.xintOut, BigInt(xintOutAry(cyc)))
