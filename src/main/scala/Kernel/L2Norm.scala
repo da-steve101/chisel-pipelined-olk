@@ -25,6 +25,7 @@ import scala.collection.mutable.ArrayBuffer
 class L2Norm(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boolean], val features : Int) extends Module {
   Predef.assert(features > 0, "There must be atleast one feature")
   def log2Features: Int = { (scala.math.log10(features)/scala.math.log10(2)).ceil.toInt }
+  Predef.assert(features == 1 << log2Features, "Features must be a power of 2")
   Predef.assert(stages.length == log2Features + 2,
     "The length of the stages ArrayBuffer into l2norm must be " + (log2Features + 2) + " for " + features + " features")
 
@@ -65,44 +66,64 @@ class L2Norm(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[B
   // connect to substage output
   val suboutConn = (io.subout zip subStage).map(pair => (pair._1 := pair._2))
 
-  // Optional stage to mux in alternative input
-  val muxStageSub = (io.subalt zip subStage).map(pair => (Mux(io.addToDict, pair._1, pair._2)))
-  // Optional Register here
-  val regStageSub = muxStageSub.map(pair => ({ val reg = Reg(init=Fixed(0.0, bitWidth, fracWidth)); reg := pair; reg }))
-
   // Square the elements
-  val sqrStage = { if (stages(0)) { regStageSub.map(x => (x*x)) } else { subStage.map(x => (x*x)) } }
+  val sqrStage = {
+    if (stages(0)) {
+      // Optional stage to mux in alternative input
+      val muxStageSub = (io.subalt zip subStage).map(pair => (Mux(io.addToDict, pair._1, pair._2)))
+      // Optional Register here
+      val regStageSub = muxStageSub.map(pair => ({ val reg = Reg(init=Fixed(0.0, bitWidth, fracWidth)); reg := pair; reg }))
+      regStageSub.map(x => (x*x))
+    } else {
+      subStage.map(x => (x*x)) } }
   // connect sqrstage output
   val sqroutConn = (io.sqrout zip sqrStage).map(pair => (pair._1 := pair._2))
 
-  // Optional stage to mux in alternative input
-  val muxStageSqr = (io.sqralt zip sqrStage).map(pair => (Mux(io.addToDict, pair._1, pair._2)))
-  // Optional Register here
-  val regStageSqr = muxStageSqr.map(pair => ({ val reg = Reg(init=Fixed(0.0, bitWidth, fracWidth)); reg := pair; reg }))
-
   // Adder Tree
   // Tree Roots
-  val adderTree = { if (stages(1)) { MutableList(group(regStageSqr.toList,2)) } else { MutableList(group(sqrStage.toList,2)) }}
+  val adderTree = {
+    if (stages(1)) {
+      // Optional stage to mux in alternative input
+      val muxStageSqr = (io.sqralt zip sqrStage).map(pair => (Mux(io.addToDict, pair._1, pair._2)))
+      // Optional Register here
+      val regStageSqr = muxStageSqr.map(pair => ({ val reg = Reg(init=Fixed(0.0, bitWidth, fracWidth)); reg := pair; reg }))
+      MutableList(group(regStageSqr.toList,2))
+    } else {
+      MutableList(group(sqrStage.toList,2)) }}
   val adderAdditionTree = MutableList(adderTree(0).map(pair => (pair(0) + pair(1))))
   // Connection out for adder
   val adderoutConn = MutableList((adderoutList.take(1<<(log2Features-1)) zip adderAdditionTree(0)).map(pair => (pair._1 := pair._2)))
   // Optional Mux and Register stages
-  val adderMuxs = MutableList((adderaltList.take(1<<(log2Features-1)) zip adderAdditionTree(0)).map(pair => (Mux(io.addToDict, pair._1, pair._2))))
-  val adderRegs = MutableList(adderMuxs(0).map(pair => ({ val reg = Reg(init=Fixed(0.0, bitWidth, fracWidth)); reg := pair; reg })))
+  val adderMuxs = {
+    if (stages(2) ) {
+      MutableList((adderaltList.take(1<<(log2Features-1)) zip adderAdditionTree(0)).map(pair => (Mux(io.addToDict, pair._1, pair._2))))
+    } else {
+      new MutableList[List[Fixed]]()  } }
+  val adderRegs = {
+    if ( stages(2) ) {
+      MutableList(adderMuxs(0).map(pair => ({ val reg = Reg(init=Fixed(0.0, bitWidth, fracWidth)); reg := pair; reg })))
+    } else {
+      new MutableList[List[Fixed]]()  } }
 
   // GROW TREE GROW!!!!
   var adderPos = 1 << (log2Features - 1) // A counter to keep track of adder pos
   for (i <- 0 until (log2Features - 1)) {
-    adderTree += ({ if (stages(i + 2)) { group(adderRegs(i).toList, 2) } else { group(adderAdditionTree(i).toList, 2) } }).toList
-    adderAdditionTree += adderTree(i+1).map(pair => (pair(0) + pair(1))).toList
     val noAdderVals = 1 << (log2Features - 2 - i)
-    adderoutConn += (adderoutList.drop(adderPos).take(noAdderVals) zip adderAdditionTree(i + 1)).map(pair => (pair._1 := pair._2))
-    adderMuxs += (adderaltList.drop(adderPos).take(noAdderVals) zip adderAdditionTree(i + 1)).map(pair => (Mux(io.addToDict, pair._1, pair._2)))
+    adderTree += ({ if (stages(i + 2)) { group(adderRegs.last.toList, 2) } else { group(adderAdditionTree.last.toList, 2) } }).toList
+    adderAdditionTree += adderTree.last.map(pair => (pair(0) + pair(1))).toList
+    adderoutConn += (adderoutList.drop(adderPos).take(noAdderVals) zip adderAdditionTree.last).map(pair => (pair._1 := pair._2))
+    if (stages(i + 3)) {
+      adderMuxs += (adderaltList.drop(adderPos).take(noAdderVals) zip adderAdditionTree.last).map(pair => (Mux(io.addToDict, pair._1, pair._2)))
+      adderRegs += adderMuxs.last.map(pair => ({ val reg = Reg(init=Fixed(0.0, bitWidth, fracWidth)); reg := pair; reg }))
+    }
     adderPos = adderPos + noAdderVals
-    adderRegs += adderMuxs(i + 1).map(pair => ({ val reg = Reg(init=Fixed(0.0, bitWidth, fracWidth)); reg := pair; reg }))
-  }
+    }
   // Output - last must have a register so ignore stages input
-  io.result := adderRegs(log2Features - 1)(0)
+  if (stages.last) {
+    io.result := adderRegs.last.last
+  } else {
+    io.result := adderAdditionTree.last.last
+  }
 }
 
 class L2NormTests(c : L2Norm) extends Tester(c) {
@@ -111,8 +132,8 @@ class L2NormTests(c : L2Norm) extends Tester(c) {
   def toFixed(x : Int, fracWidth : Int) : BigInt = BigInt(scala.math.round(x*scala.math.pow(2, fracWidth)))
   val r = scala.util.Random
 
-  var noStages = 1 // last must have a stage
-  for (i <- 0 until (c.stages.length - 1))
+  var noStages = 0
+  for (i <- 0 until (c.stages.length))
     noStages = { if (c.stages(i)) { noStages + 1 } else { noStages } }
 
   val cycles = 10*noStages
