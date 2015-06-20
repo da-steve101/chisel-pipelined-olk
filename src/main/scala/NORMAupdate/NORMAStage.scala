@@ -3,29 +3,48 @@ package OLK.NORMAStage
 import Chisel._
 import cla.types._
 
+class IOBundle(val bitWidth : Int, val fracWidth : Int) extends Bundle {
+  val sum    = Fixed(INPUT, bitWidth, fracWidth)
+  val zp     = Fixed(INPUT, bitWidth, fracWidth)
+  val wD     = Fixed(INPUT, bitWidth, fracWidth)
+  val forget = Fixed(INPUT, bitWidth, fracWidth)
+
+  val etapos = Fixed(INPUT, bitWidth, fracWidth) // = eta
+  val etaneg = Fixed(INPUT, bitWidth, fracWidth) // = -eta
+  val etanu  = Fixed(INPUT, bitWidth, fracWidth) // = eta*nu
+  val etanu1 = Fixed(INPUT, bitWidth, fracWidth) // = -eta*(1-nu)
+
+  val addToDict = Bool(OUTPUT)
+  val ft        = Fixed(OUTPUT, bitWidth, fracWidth)
+  val alpha     = Fixed(OUTPUT, bitWidth, fracWidth)
+}
+
+// Only used for NORMAc
+class IOBundle_C(val bitWidth_c : Int, val fracWidth_c : Int) extends IOBundle(bitWidth_c, fracWidth_c) {
+  val yC = Bool(INPUT)
+}
+
+// Only used for NORMAr
+class IOBundle_R(val bitWidth_r : Int, val fracWidth_r : Int) extends IOBundle(bitWidth_r, fracWidth_r) {
+  val yReg = Fixed(INPUT, bitWidth_r, fracWidth_r)
+}
+
 /** NORMAStage
   This file computes the update for NORMA
   */
 class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) extends Module {
   Predef.assert(NORMAtype == 1 || NORMAtype == 2 || NORMAtype == 3,
     "Norma type must be Classification = 1, Novelty = 2, Regression = 3")
-  val io = new Bundle {
-    val sum    = Fixed(INPUT, bitWidth, fracWidth)
-    val zp     = Fixed(INPUT, bitWidth, fracWidth)
-    val wD     = Fixed(INPUT, bitWidth, fracWidth)
-    val forget = Fixed(INPUT, bitWidth, fracWidth)
 
-    val yC     = Bool(INPUT) // Only used for NORMAc
-    val yReg   = Fixed(INPUT, bitWidth, fracWidth) // Only used for NORMAr
-    val etapos = Fixed(INPUT, bitWidth, fracWidth) // = eta
-    val etaneg = Fixed(INPUT, bitWidth, fracWidth) // = -eta
-    val etanu  = Fixed(INPUT, bitWidth, fracWidth) // = eta*nu
-    val etanu1 = Fixed(INPUT, bitWidth, fracWidth) // = -eta*(1-nu)
-
-    val addToDict = Bool(OUTPUT)
-    val ft        = Fixed(OUTPUT, bitWidth, fracWidth)
-    val alpha     = Fixed(OUTPUT, bitWidth, fracWidth)
-  }
+  var yC   = Bool(true)
+  var yReg = Fixed(0, bitWidth, fracWidth)
+  val io = {
+    if (NORMAtype == 1) {
+      val res = new IOBundle_C(bitWidth, fracWidth); yC = res.yC; res
+    } else if (NORMAtype == 2) {
+      val res = new IOBundle_R(bitWidth, fracWidth); yReg = res.yReg; res
+    } else {
+      new IOBundle(bitWidth, fracWidth) }}
   val zero = Fixed(0, bitWidth, fracWidth)
   val rhoReg = Reg(init=zero)
   val alphaReg = Reg(init=zero)
@@ -46,7 +65,7 @@ class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) e
     val bReg = Reg(init=zero)
     res.io.bOld := bReg
     bReg := res.io.bNew
-    res.io.y := io.yC
+    res.io.y := yC
     res.io.etapos := io.etapos
     res.io.etaneg := io.etaneg
     alphaReg := Mux(res.io.sign, io.etapos, io.etaneg)
@@ -58,7 +77,7 @@ class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) e
     res
   } else {
     val res = Module(new NORMAr(bitWidth, fracWidth))
-    res.io.y := io.yReg
+    res.io.y := yReg
     alphaReg := Mux(res.io.sign, io.etapos, io.etaneg)
     res
   } }
@@ -104,8 +123,14 @@ class NORMAStageTests(c: NORMAStage) extends Tester(c) {
     poke(c.io.zp, zp)
     poke(c.io.wD, wD)
     poke(c.io.forget, forget)
-    poke(c.io.yC, Bool(yC == 1).litValue())
-    poke(c.io.yReg, yReg)
+    if (c.NORMAtype == 1) {
+      val c_C = c.io.asInstanceOf[IOBundle_C]
+      poke(c_C.yC, Bool(yC == 1).litValue())
+    }
+    if (c.NORMAtype == 2) {
+      val c_R = c.io.asInstanceOf[IOBundle_R]
+      poke(c_R.yReg, yReg)
+    }
     poke(c.io.etanu, etanu)
     poke(c.io.etanu1, etanu1)
     poke(c.io.etapos, etapos)
