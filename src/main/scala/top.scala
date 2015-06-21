@@ -14,7 +14,7 @@ object Top {
 //    chiselMainTest(args, () => Module(new JustTestingCrap(18))) {
 //      c => new JustTestingCrapTests(c) }
 
-    chiselMainTest(args, () => Module(new Dict(18, 4, 20, 5, 10))) {
+    chiselMainTest(args, () => Module(new Dict(18, 4, 20, 5, 10, false))) {
       c => new DictTests(c) }
   }
 
