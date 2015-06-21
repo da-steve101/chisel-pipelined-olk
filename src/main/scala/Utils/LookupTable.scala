@@ -3,17 +3,15 @@ package OLK.Util
 import Chisel._
 import scala.collection.mutable.ArrayBuffer
 
-class LookupTable(val tableValues : ArrayBuffer[Int]) {
-  def log2Table: Int = { (scala.math.log10(tableValues.length)/scala.math.log10(2)).ceil.toInt }
+class LookupTable[T <: Bits](val tableValues : ArrayBuffer[T]) extends Module {
   // table for generic type
   val io = new Bundle {
-    val addr = UInt(INPUT, width=log2Table)
-    val out  = dtype.clone.asOutput
+    val addr = UInt(INPUT, width=log2Up(tableValues.length))
+    val out  = tableValues(0).clone.asOutput
   }
+}
+
+class LookupTableTests[T <: Bits](c: LookupTable[T]) extends Tester(c) {
 
 }
 
-class LookupTableTests(c : LookupTable) extends Tester(c) {
-
-
-}
