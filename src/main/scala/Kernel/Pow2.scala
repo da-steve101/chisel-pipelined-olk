@@ -93,7 +93,9 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
     x += increment
   }
 
-  // TODO: create Lookup Tables gradTable(gradients) and offsetTable(offsets)
+  // Create Lookup Tables gradTable(gradients) and offsetTable(offsets)
+  val gradTable = Vec(gradients.map((i: Int) => Fixed(BigInt(i), bitWidth, fracWidth)))
+  val offsetTable = Vec(offsets.map((i: Int) => Fixed(BigInt(i), bitWidth, fracWidth)))
 
   // multiply gamma*x
   val xValOut = io.gamma*io.x
@@ -108,9 +110,9 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   val x_tabl = xVal(fracWidth - 1, fracWidth - log2Table)
 
   // get values from lookup table
-  val gradTabOut = x_frac // TODO: replace x_frac with gradTable(addr=x_tabl)
+  val gradTabOut = gradTable(x_tabl)
   io.gradTabOut := gradTabOut
-  val offTabOut = ZERO // TODO: replace ZERO with offsetTable(addr=x_tabl)
+  val offTabOut = offsetTable(x_tabl)
   io.offTabOut := offTabOut
   val xFracOut = x_frac
   io.xFracOut := xFracOut
@@ -144,7 +146,7 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   // END OF STAGE 3
 
   // calculate y >> x_int
-  val yOut = (yFrac >> x_int_delayed)
+  val yOut = yFrac.fromSInt(yFrac.toSInt >> x_int_delayed)
   io.yOut := yOut
   val y    = optional(stages(4), io.yAlt, yOut)
 
