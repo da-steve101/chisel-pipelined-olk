@@ -11,10 +11,10 @@ import scala.collection.mutable.ArrayBuffer
   */
 class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boolean],
   val lookupTableSize : Int) extends Module {
-  def log2Table: Int = { (scala.math.log10(lookupTableSize)/scala.math.log10(2)).ceil.toInt }
+  Predef.assert(lookupTableSize > 0, "Table size must be greater than zero")
+  def log2Table: Int = { log2Up(lookupTableSize) }
   Predef.assert((1 << log2Table) == lookupTableSize, "Table size must be a power of 2")
   Predef.assert(log2Table < fracWidth, "Table size must be smaller than the number of fractional bits")
-  Predef.assert(log2Table > 0, "Table size must be greater than zero")
   Predef.assert(stages.length == 5, "The size of stages must be exactly 5")
   val ZERO      = Fixed(0, bitWidth, fracWidth)
   val ZERO_UINT = UInt(0, width=(bitWidth-fracWidth))
@@ -52,6 +52,7 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
     val y = Fixed(OUTPUT, bitWidth, fracWidth)
   }
 
+
   // For now just have two ... replace later
   def optional(stage : Boolean, alt : Fixed, calc : Fixed) : Fixed = {
     if ( stage ) {
@@ -77,7 +78,7 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   val gradients   = new ArrayBuffer[Int]()
   val offsets     = new ArrayBuffer[Int]()
   // Fixed point increment
-  val increment   = 1.0 / (1 << (fracWidth - log2Table))
+  val increment   = 1.0 / (1 << log2Table)
   val tableEnd    = 1.0
   var x = 0.0
   // NOTE: x is positive, therefore gradient is negitive
