@@ -1,0 +1,241 @@
+[info] Loading project definition from /home/duncan/repos/hardware/chisel-pipelined-olk/project
+[info] Set current project to chisel-pipelined-olk (in build file:/home/duncan/repos/hardware/chisel-pipelined-olk/)
+[info] Compiling 1 Scala source to /home/duncan/repos/hardware/chisel-pipelined-olk/target/scala-2.10/classes...
+[info] Running OLK.Top NORMAc --genHarness --compile --test --backend c --vcd
+MutableList(List(/*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR))), List(/*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR))), List(/*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR)), /*? in < (class OLK.Sum.SumR)>*/ cla.types.Fixed(width=None, connect to 1 inputs: ([Chisel.SInt] in OLK.Sum.SumR))))
+CPP elaborate
+[[35minfo[0m] [0.065] // COMPILING < (class OLK.Sum.SumR)>(0)
+[[35minfo[0m] [0.072] giving names
+[[35minfo[0m] [0.081] executing custom transforms
+[[35minfo[0m] [0.082] adding clocks and resets
+[[35minfo[0m] [0.089] inferring widths
+[[35minfo[0m] [0.104] checking widths
+[[35minfo[0m] [0.109] lowering complex nodes to primitives
+[[35minfo[0m] [0.109] removing type nodes
+[[35minfo[0m] [0.112] compiling 123 nodes
+[[35minfo[0m] [0.112] computing memory ports
+[[35minfo[0m] [0.112] resolving nodes to the components
+[[35minfo[0m] [0.128] creating clock domains
+[[35minfo[0m] [0.129] pruning unconnected IOs
+[[35minfo[0m] [0.132] checking for combinational loops
+[[35minfo[0m] [0.135] NO COMBINATIONAL LOOP FOUND
+[[35minfo[0m] [0.142] populating clock domains
+CppBackend::elaborate: need 0, redundant 0 shadow registers
+[[35minfo[0m] [0.159] generating cpp files
+CppBackend: createCppFile SumR.cpp
+[[35minfo[0m] [0.798] g++ -c -o ./SumR-emulator.o  -I../ -Inull/csrc/  ./SumR-emulator.cpp RET 0
+[[35minfo[0m] [1.289] g++ -c -o ./SumR.o  -I../ -Inull/csrc/  ./SumR.cpp RET 0
+[[35minfo[0m] [1.339] g++  -o ./SumR ./SumR.o ./SumR-emulator.o RET 0
+[[33mwarn[0m] top.scala:22: 'NORMAc' is an unknown argument. in class OLK.Top$
+SEED 1434944293720
+STARTING ./SumR
+RESET 5
+  POKE SumR.io_vi_0 <-  0x469
+  POKE SumR.io_alphai_0 <-  0x0
+  POKE SumR.io_vi_1 <-  0x5ba
+  POKE SumR.io_alphai_1 <-  0x2e6
+  POKE SumR.io_vi_2 <-  0x48a
+  POKE SumR.io_alphai_2 <-  0x172
+  POKE SumR.io_vi_3 <-  0x0
+  POKE SumR.io_alphai_3 <-  0x745
+  POKE SumR.io_vi_4 <-  0xb5
+  POKE SumR.io_alphai_4 <-  0x48b
+  POKE SumR.io_vi_5 <-  0x3bb
+  POKE SumR.io_alphai_5 <-  0x0
+  POKE SumR.io_vi_6 <-  0x0
+  POKE SumR.io_alphai_6 <-  0xd1
+  POKE SumR.io_vi_7 <-  0x3a6
+  POKE SumR.io_alphai_7 <-  0x764
+  PEEK SumR.io_sumR -> 0x1728
+EXPECT SumR.io_sumR <- 5928 == 13657 FAIL
+  POKE SumR.io_vi_0 <-  0x180
+  POKE SumR.io_alphai_0 <-  0x1d8
+  POKE SumR.io_vi_1 <-  0x566
+  POKE SumR.io_alphai_1 <-  0x2c2
+  POKE SumR.io_vi_2 <-  0x6b4
+  POKE SumR.io_alphai_2 <-  0x99
+  POKE SumR.io_vi_3 <-  0x5be
+  POKE SumR.io_alphai_3 <-  0x47d
+  POKE SumR.io_vi_4 <-  0x123
+  POKE SumR.io_alphai_4 <-  0x0
+  POKE SumR.io_vi_5 <-  0x142
+  POKE SumR.io_alphai_5 <-  0xac0
+  POKE SumR.io_vi_6 <-  0x472
+  POKE SumR.io_alphai_6 <-  0x8fb
+  POKE SumR.io_vi_7 <-  0x2bd
+  POKE SumR.io_alphai_7 <-  0x68
+  PEEK SumR.io_sumR -> 0x2f6d
+EXPECT SumR.io_sumR <- 12141 == 26111 FAIL
+  POKE SumR.io_vi_0 <-  0x6ed
+  POKE SumR.io_alphai_0 <-  0x53
+  POKE SumR.io_vi_1 <-  0x1
+  POKE SumR.io_alphai_1 <-  0xeb
+  POKE SumR.io_vi_2 <-  0x363
+  POKE SumR.io_alphai_2 <-  0xe6
+  POKE SumR.io_vi_3 <-  0x153
+  POKE SumR.io_alphai_3 <-  0x4d7
+  POKE SumR.io_vi_4 <-  0x40a
+  POKE SumR.io_alphai_4 <-  0x0
+  POKE SumR.io_vi_5 <-  0x1bf
+  POKE SumR.io_alphai_5 <-  0x1e3
+  POKE SumR.io_vi_6 <-  0x17
+  POKE SumR.io_alphai_6 <-  0xb21
+  POKE SumR.io_vi_7 <-  0x93f
+  POKE SumR.io_alphai_7 <-  0x3c2
+  PEEK SumR.io_sumR -> 0x0bb0
+EXPECT SumR.io_sumR <- 2992 == 12996 FAIL
+  POKE SumR.io_vi_0 <-  0x8ff
+  POKE SumR.io_alphai_0 <-  0xd5
+  POKE SumR.io_vi_1 <-  0xc
+  POKE SumR.io_alphai_1 <-  0x8f2
+  POKE SumR.io_vi_2 <-  0x5b
+  POKE SumR.io_alphai_2 <-  0x5e5
+  POKE SumR.io_vi_3 <-  0xbe3
+  POKE SumR.io_alphai_3 <-  0x67
+  POKE SumR.io_vi_4 <-  0x0
+  POKE SumR.io_alphai_4 <-  0x3c8
+  POKE SumR.io_vi_5 <-  0x6b
+  POKE SumR.io_alphai_5 <-  0x0
+  POKE SumR.io_vi_6 <-  0x1ca
+  POKE SumR.io_alphai_6 <-  0x0
+  POKE SumR.io_vi_7 <-  0x812
+  POKE SumR.io_alphai_7 <-  0x3b2
+  PEEK SumR.io_sumR -> 0x0ec7
+EXPECT SumR.io_sumR <- 3783 == 11421 FAIL
+  POKE SumR.io_vi_0 <-  0x9b5
+  POKE SumR.io_alphai_0 <-  0x53
+  POKE SumR.io_vi_1 <-  0x68
+  POKE SumR.io_alphai_1 <-  0xf6
+  POKE SumR.io_vi_2 <-  0x35e
+  POKE SumR.io_alphai_2 <-  0x619
+  POKE SumR.io_vi_3 <-  0x6ec
+  POKE SumR.io_alphai_3 <-  0x56e
+  POKE SumR.io_vi_4 <-  0x108
+  POKE SumR.io_alphai_4 <-  0x51a
+  POKE SumR.io_vi_5 <-  0x39f
+  POKE SumR.io_alphai_5 <-  0x488
+  POKE SumR.io_vi_6 <-  0x5e2
+  POKE SumR.io_alphai_6 <-  0x2d6
+  POKE SumR.io_vi_7 <-  0x112
+  POKE SumR.io_alphai_7 <-  0x432
+  PEEK SumR.io_sumR -> 0x3da5
+EXPECT SumR.io_sumR <- 15781 == 26745 FAIL
+  POKE SumR.io_vi_0 <-  0x0
+  POKE SumR.io_alphai_0 <-  0x4f4
+  POKE SumR.io_vi_1 <-  0x1
+  POKE SumR.io_alphai_1 <-  0xac7
+  POKE SumR.io_vi_2 <-  0x74d
+  POKE SumR.io_alphai_2 <-  0x708
+  POKE SumR.io_vi_3 <-  0xc3
+  POKE SumR.io_alphai_3 <-  0xce4
+  POKE SumR.io_vi_4 <-  0x1d2
+  POKE SumR.io_alphai_4 <-  0x7c0
+  POKE SumR.io_vi_5 <-  0x4ff
+  POKE SumR.io_alphai_5 <-  0x6d8
+  POKE SumR.io_vi_6 <-  0x9a1
+  POKE SumR.io_alphai_6 <-  0x0
+  POKE SumR.io_vi_7 <-  0x347
+  POKE SumR.io_alphai_7 <-  0x9a
+  PEEK SumR.io_sumR -> 0x3d30
+EXPECT SumR.io_sumR <- 15664 == 28538 FAIL
+  POKE SumR.io_vi_0 <-  0x44e
+  POKE SumR.io_alphai_0 <-  0x80
+  POKE SumR.io_vi_1 <-  0x6a4
+  POKE SumR.io_alphai_1 <-  0x225
+  POKE SumR.io_vi_2 <-  0x205
+  POKE SumR.io_alphai_2 <-  0x532
+  POKE SumR.io_vi_3 <-  0x69e
+  POKE SumR.io_alphai_3 <-  0x85
+  POKE SumR.io_vi_4 <-  0x1
+  POKE SumR.io_alphai_4 <-  0x20d
+  POKE SumR.io_vi_5 <-  0x9e3
+  POKE SumR.io_alphai_5 <-  0xa8
+  POKE SumR.io_vi_6 <-  0x3ff
+  POKE SumR.io_alphai_6 <-  0x9c2
+  POKE SumR.io_vi_7 <-  0x44c
+  POKE SumR.io_alphai_7 <-  0x5bb
+  PEEK SumR.io_sumR -> 0x1e51
+EXPECT SumR.io_sumR <- 7761 == 25714 FAIL
+  POKE SumR.io_vi_0 <-  0x0
+  POKE SumR.io_alphai_0 <-  0x6a2
+  POKE SumR.io_vi_1 <-  0x20d
+  POKE SumR.io_alphai_1 <-  0x3a2
+  POKE SumR.io_vi_2 <-  0x226
+  POKE SumR.io_alphai_2 <-  0x2fc
+  POKE SumR.io_vi_3 <-  0x0
+  POKE SumR.io_alphai_3 <-  0xad
+  POKE SumR.io_vi_4 <-  0xb82
+  POKE SumR.io_alphai_4 <-  0x8f8
+  POKE SumR.io_vi_5 <-  0x0
+  POKE SumR.io_alphai_5 <-  0xd18
+  POKE SumR.io_vi_6 <-  0x7b
+  POKE SumR.io_alphai_6 <-  0x11c
+  POKE SumR.io_vi_7 <-  0xbfd
+  POKE SumR.io_alphai_7 <-  0x65a
+  PEEK SumR.io_sumR -> 0x0ddc
+EXPECT SumR.io_sumR <- 3548 == 49608 FAIL
+  POKE SumR.io_vi_0 <-  0x23e
+  POKE SumR.io_alphai_0 <-  0x664
+  POKE SumR.io_vi_1 <-  0x4
+  POKE SumR.io_alphai_1 <-  0xc9
+  POKE SumR.io_vi_2 <-  0x6af
+  POKE SumR.io_alphai_2 <-  0x12b
+  POKE SumR.io_vi_3 <-  0x4e1
+  POKE SumR.io_alphai_3 <-  0x7d5
+  POKE SumR.io_vi_4 <-  0x16e
+  POKE SumR.io_alphai_4 <-  0x0
+  POKE SumR.io_vi_5 <-  0x112
+  POKE SumR.io_alphai_5 <-  0x9a5
+  POKE SumR.io_vi_6 <-  0x45c
+  POKE SumR.io_alphai_6 <-  0x19f
+  POKE SumR.io_vi_7 <-  0x33
+  POKE SumR.io_alphai_7 <-  0xc66
+  PEEK SumR.io_sumR -> 0x3c5b
+EXPECT SumR.io_sumR <- 15451 == 20532 FAIL
+  POKE SumR.io_vi_0 <-  0x1ec
+  POKE SumR.io_alphai_0 <-  0x432
+  POKE SumR.io_vi_1 <-  0x6f4
+  POKE SumR.io_alphai_1 <-  0x2af
+  POKE SumR.io_vi_2 <-  0x0
+  POKE SumR.io_alphai_2 <-  0x7d3
+  POKE SumR.io_vi_3 <-  0x367
+  POKE SumR.io_alphai_3 <-  0x4dc
+  POKE SumR.io_vi_4 <-  0x979
+  POKE SumR.io_alphai_4 <-  0x641
+  POKE SumR.io_vi_5 <-  0x3ae
+  POKE SumR.io_alphai_5 <-  0x107
+  POKE SumR.io_vi_6 <-  0x21
+  POKE SumR.io_alphai_6 <-  0x129
+  POKE SumR.io_vi_7 <-  0x18f
+  POKE SumR.io_alphai_7 <-  0x111
+  PEEK SumR.io_sumR -> 0x2b40
+EXPECT SumR.io_sumR <- 11072 == 27678 FAIL
+  POKE SumR.io_vi_0 <-  0x458
+  POKE SumR.io_alphai_0 <-  0x2d4
+  POKE SumR.io_vi_1 <-  0x398
+  POKE SumR.io_alphai_1 <-  0x26c
+  POKE SumR.io_vi_2 <-  0x94
+  POKE SumR.io_alphai_2 <-  0x9c3
+  POKE SumR.io_vi_3 <-  0xc9
+  POKE SumR.io_alphai_3 <-  0x2fa
+  POKE SumR.io_vi_4 <-  0x90
+  POKE SumR.io_alphai_4 <-  0x736
+  POKE SumR.io_vi_5 <-  0x504
+  POKE SumR.io_alphai_5 <-  0x467
+  POKE SumR.io_vi_6 <-  0x349
+  POKE SumR.io_alphai_6 <-  0xfd
+  POKE SumR.io_vi_7 <-  0x62e
+  POKE SumR.io_alphai_7 <-  0xbeb
+  PEEK SumR.io_sumR -> 0x1cf6
+EXPECT SumR.io_sumR <- 7414 == 33797 FAIL
+RAN 0 CYCLES FAILED FIRST AT CYCLE 0
+*** FAILED ***
+[error] (run-main-0) Chisel.ChiselException: Module under test FAILED at least one test vector.
+Chisel.ChiselException: Module under test FAILED at least one test vector.
+	at OLK.Top$.main(top.scala:22)
+[trace] Stack trace suppressed: run 'last root/compile:run' for the full output.
+java.lang.RuntimeException: Nonzero exit code: 1
+	at scala.sys.package$.error(package.scala:27)
+[trace] Stack trace suppressed: run 'last root/compile:run' for the full output.
+[error] (root/compile:run) Nonzero exit code: 1
+[error] Total time: 6 s, completed 22/06/2015 1:38:15 PM

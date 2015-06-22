@@ -40,19 +40,28 @@ import cla.types._
   wD   = Spare_(s-1)[1]
   */
 
-class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, val numStages : Int) extends Module {
-  def group[A](list : List[A], size : Int) : List[List[A]] = list.foldLeft( (List[List[A]](), 0) ) { (r, c) => 
-    r match {
-      case (head :: tail, num) =>
-        if (num < size) ( (c :: head) :: tail, num + 1)
-        else            ( List(c) :: head :: tail, 1)
-    case (Nil, num) => (List(List(c)),1)
-    }
-  }._1.foldLeft(List[List[A]]())( (r,c) => c.reverse :: r)
+class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, val stages : ArrayBuffer[Boolean]) extends Module {
+    
+    def group[A](list : List[A], size : Int) : List[List[A]] = list.foldLeft( (List[List[A]](), 0) ) { (r, c) => 
+        r match {
+            case (head :: tail, num) =>
+                if (num < size) ( (c :: head) :: tail, num + 1)
+                else            ( List(c) :: head :: tail, 1)
+            case (Nil, num) => (List(List(c)),1)
+        }
+    }._1.foldLeft(List[List[A]]())( (r,c) => c.reverse :: r)
+
+    def buildLevel[A](list : List[A], op : (A, A) => A) : List[A] = group(list, 2).map(l => l.reduce[A](op(_,_)))
+
+    def pipeline(wire : Fixed, hasStage : Boolean) = if (hasStage) Reg(init=Fixed(0, wire.getWidth(), wire.fractionalWidth), next=wire) else wire
+
+    def pipeAdd(hasStage : Boolean)(a : Fixed, b : Fixed) : Fixed = pipeline(a + b, hasStage)
 
     val lnOf2 = scala.math.log(2)
     def log2(x : Int) : Int = (scala.math.log(x.toDouble) / lnOf2).toInt
     def log2(x : Double) : Int = (scala.math.log(x) / lnOf2).toInt
+
+    def spareLevel(list : List[Fixed]) : Vec[Fixed] = Mux(io.addToDict, Vec(list.drop(1)), Vec(list.dropRight(1)))
 
     val io = new Bundle {
         val vi  = Vec.fill(dictionarySize){Fixed(INPUT, bitWidth, fracWidth)}
@@ -72,29 +81,30 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
     val alphaiList = io.alphai.toList
 
     // wi = vi.*alphai
-    val wiList = (viList zip alphaiList).map(pair => pair._1 * pair._2)
+    val wiList = (viList, alphaiList).zipped.map(_*_)
 
-    // Pipeline Stage Correction
-    // Spares
-    val spares = scala.collection.mutable.MutableList(Mux(io.addToDict, Vec(wiList.slice(dictionarySize - numStages, dictionarySize)), Vec(wiList.slice(dictionarySize - numStages - 1, dictionarySize - 1))))
-    val pipeStage = scala.collection.mutable.MutableList(Mux(io.addToDict, wiList(dictionarySize - numStages - 1), 0))
-    for (i <- 0 until numStages) {
+    val n = stages.length
 
-    }
+    val treeStart = wiList.map(a => pipeline(a, stages(0)))
 
-    // Adder Tree
-    // Tree Roots
-    val adderTree = scala.collection.mutable.MutableList(group(wiList,2))
-    val adderAdditionTree = scala.collection.mutable.MutableList(adderTree(0).map(pair => pair(0) + pair(1)))
-    
-    // GROW TREE GROW!!!!
-    for (i <- 0 until log2(dictionarySize/2)) {
-      adderTree += group(adderAdditionTree(i), 2)
-      adderAdditionTree += adderTree(i+1).map(pair => pair(0) + pair(1))
+    val sumrTree = scala.collection.mutable.MutableList(wiList.dropRight(dictionarySize - stages.length - 1))
+    val spareTree = scala.collection.mutable.MutableList(wiList.drop(dictionarySize - stages.length - 1))
+    // Build Adder Tree
+    for (i <- 1 until n) {
+        val adderLevel = buildLevel(sumrTree.last.toList, pipeAdd(stages(i)))
+        if (stages(i)) {
+            val spare = spareLevel(spareTree.last.toList).toList
+            sumrTree += (adderLevel :+ spareTree.last.head)
+            spareTree += spare
+        } else {
+            sumrTree += adderLevel
+        }
     }
 
     // Output
-    io.sumR := adderAdditionTree(log2(dictionarySize/2+1))(0)
+    io.sumR := sumrTree.last.head
+    io.wD := spareTree.last.head
+    io.wD1 := spareTree.last.last
 }
 
 class SumRTests(c : SumR) extends Tester(c) {

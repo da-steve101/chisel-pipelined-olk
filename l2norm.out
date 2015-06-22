@@ -1,0 +1,239 @@
+[info] Loading project definition from /home/duncan/repos/hardware/chisel-pipelined-olk/project
+[info] Set current project to chisel-pipelined-olk (in build file:/home/duncan/repos/hardware/chisel-pipelined-olk/)
+[info] Running OLK.Top l2norm --genHarness --compile --test --backend c --vcd
+CPP elaborate
+[[35minfo[0m] [0.066] // COMPILING < (class OLK.Sum.SumR)>(0)
+[[35minfo[0m] [0.073] giving names
+[[35minfo[0m] [0.083] executing custom transforms
+[[35minfo[0m] [0.083] adding clocks and resets
+[[35minfo[0m] [0.090] inferring widths
+[[35minfo[0m] [0.102] checking widths
+[[35minfo[0m] [0.107] lowering complex nodes to primitives
+[[35minfo[0m] [0.108] removing type nodes
+[[35minfo[0m] [0.110] compiling 123 nodes
+[[35minfo[0m] [0.110] computing memory ports
+[[35minfo[0m] [0.110] resolving nodes to the components
+[[35minfo[0m] [0.127] creating clock domains
+[[35minfo[0m] [0.128] pruning unconnected IOs
+[[35minfo[0m] [0.131] checking for combinational loops
+[[35minfo[0m] [0.134] NO COMBINATIONAL LOOP FOUND
+[[35minfo[0m] [0.143] populating clock domains
+CppBackend::elaborate: need 0, redundant 0 shadow registers
+[[35minfo[0m] [0.162] generating cpp files
+CppBackend: createCppFile SumR.cpp
+[[35minfo[0m] [0.824] g++ -c -o ./SumR-emulator.o  -I../ -Inull/csrc/  ./SumR-emulator.cpp RET 0
+[[35minfo[0m] [1.309] g++ -c -o ./SumR.o  -I../ -Inull/csrc/  ./SumR.cpp RET 0
+[[35minfo[0m] [1.360] g++  -o ./SumR ./SumR.o ./SumR-emulator.o RET 0
+[[33mwarn[0m] top.scala:22: 'l2norm' is an unknown argument. in class OLK.Top$
+SEED 1434944224986
+STARTING ./SumR
+RESET 5
+  POKE SumR.io_vi_0 <-  0x2f5
+  POKE SumR.io_alphai_0 <-  0x82d
+  POKE SumR.io_vi_1 <-  0x59
+  POKE SumR.io_alphai_1 <-  0xaa7
+  POKE SumR.io_vi_2 <-  0x46b
+  POKE SumR.io_alphai_2 <-  0x694
+  POKE SumR.io_vi_3 <-  0x7fa
+  POKE SumR.io_alphai_3 <-  0xecc
+  POKE SumR.io_vi_4 <-  0x3a8
+  POKE SumR.io_alphai_4 <-  0x17a
+  POKE SumR.io_vi_5 <-  0x504
+  POKE SumR.io_alphai_5 <-  0x6f
+  POKE SumR.io_vi_6 <-  0x1a1
+  POKE SumR.io_alphai_6 <-  0x685
+  POKE SumR.io_vi_7 <-  0x22
+  POKE SumR.io_alphai_7 <-  0x41f
+  PEEK SumR.io_sumR -> 0xaef7
+EXPECT SumR.io_sumR <- 44791 == 49591 FAIL
+  POKE SumR.io_vi_0 <-  0x121
+  POKE SumR.io_alphai_0 <-  0x37
+  POKE SumR.io_vi_1 <-  0xbda
+  POKE SumR.io_alphai_1 <-  0xd6
+  POKE SumR.io_vi_2 <-  0x11a
+  POKE SumR.io_alphai_2 <-  0x148
+  POKE SumR.io_vi_3 <-  0x7d1
+  POKE SumR.io_alphai_3 <-  0xd0
+  POKE SumR.io_vi_4 <-  0xc4d
+  POKE SumR.io_alphai_4 <-  0x2a1
+  POKE SumR.io_vi_5 <-  0x116
+  POKE SumR.io_alphai_5 <-  0x0
+  POKE SumR.io_vi_6 <-  0x9f6
+  POKE SumR.io_alphai_6 <-  0x122
+  POKE SumR.io_vi_7 <-  0x0
+  POKE SumR.io_alphai_7 <-  0x8d6
+  PEEK SumR.io_sumR -> 0x11e8
+EXPECT SumR.io_sumR <- 4584 == 15753 FAIL
+  POKE SumR.io_vi_0 <-  0x122
+  POKE SumR.io_alphai_0 <-  0x62
+  POKE SumR.io_vi_1 <-  0x114
+  POKE SumR.io_alphai_1 <-  0x85d
+  POKE SumR.io_vi_2 <-  0x1e9
+  POKE SumR.io_alphai_2 <-  0x613
+  POKE SumR.io_vi_3 <-  0x200
+  POKE SumR.io_alphai_3 <-  0x1c1
+  POKE SumR.io_vi_4 <-  0x994
+  POKE SumR.io_alphai_4 <-  0x25c
+  POKE SumR.io_vi_5 <-  0x57d
+  POKE SumR.io_alphai_5 <-  0x3bd
+  POKE SumR.io_vi_6 <-  0x7fc
+  POKE SumR.io_alphai_6 <-  0xa20
+  POKE SumR.io_vi_7 <-  0x17
+  POKE SumR.io_alphai_7 <-  0x9
+  PEEK SumR.io_sumR -> 0x188f
+EXPECT SumR.io_sumR <- 6287 == 38033 FAIL
+  POKE SumR.io_vi_0 <-  0xd5
+  POKE SumR.io_alphai_0 <-  0x645
+  POKE SumR.io_vi_1 <-  0x2a2
+  POKE SumR.io_alphai_1 <-  0x5a3
+  POKE SumR.io_vi_2 <-  0x64c
+  POKE SumR.io_alphai_2 <-  0x127
+  POKE SumR.io_vi_3 <-  0x5c8
+  POKE SumR.io_alphai_3 <-  0x1ec
+  POKE SumR.io_vi_4 <-  0x433
+  POKE SumR.io_alphai_4 <-  0x5d1
+  POKE SumR.io_vi_5 <-  0x1b3
+  POKE SumR.io_alphai_5 <-  0x69
+  POKE SumR.io_vi_6 <-  0x44
+  POKE SumR.io_alphai_6 <-  0xc1
+  POKE SumR.io_vi_7 <-  0x13
+  POKE SumR.io_alphai_7 <-  0x7f
+  PEEK SumR.io_sumR -> 0x266b
+EXPECT SumR.io_sumR <- 9835 == 16328 FAIL
+  POKE SumR.io_vi_0 <-  0x6b2
+  POKE SumR.io_alphai_0 <-  0x4b
+  POKE SumR.io_vi_1 <-  0x9e2
+  POKE SumR.io_alphai_1 <-  0x179
+  POKE SumR.io_vi_2 <-  0x451
+  POKE SumR.io_alphai_2 <-  0x344
+  POKE SumR.io_vi_3 <-  0x945
+  POKE SumR.io_alphai_3 <-  0x849
+  POKE SumR.io_vi_4 <-  0x601
+  POKE SumR.io_alphai_4 <-  0x4f1
+  POKE SumR.io_vi_5 <-  0x144
+  POKE SumR.io_alphai_5 <-  0x3fa
+  POKE SumR.io_vi_6 <-  0x36
+  POKE SumR.io_alphai_6 <-  0x147
+  POKE SumR.io_vi_7 <-  0x8be
+  POKE SumR.io_alphai_7 <-  0x182
+  PEEK SumR.io_sumR -> 0x6b67
+EXPECT SumR.io_sumR <- 27495 == 39815 FAIL
+  POKE SumR.io_vi_0 <-  0x2c8
+  POKE SumR.io_alphai_0 <-  0x169
+  POKE SumR.io_vi_1 <-  0x0
+  POKE SumR.io_alphai_1 <-  0x2c8
+  POKE SumR.io_vi_2 <-  0x0
+  POKE SumR.io_alphai_2 <-  0x74a
+  POKE SumR.io_vi_3 <-  0x1a
+  POKE SumR.io_alphai_3 <-  0x250
+  POKE SumR.io_vi_4 <-  0x0
+  POKE SumR.io_alphai_4 <-  0x348
+  POKE SumR.io_vi_5 <-  0x2d
+  POKE SumR.io_alphai_5 <-  0x1ca
+  POKE SumR.io_vi_6 <-  0x798
+  POKE SumR.io_alphai_6 <-  0x108
+  POKE SumR.io_vi_7 <-  0x116
+  POKE SumR.io_alphai_7 <-  0x828
+  PEEK SumR.io_sumR -> 0x0428
+EXPECT SumR.io_sumR <- 1064 == 5411 FAIL
+  POKE SumR.io_vi_0 <-  0x0
+  POKE SumR.io_alphai_0 <-  0x497
+  POKE SumR.io_vi_1 <-  0x1d2
+  POKE SumR.io_alphai_1 <-  0x228
+  POKE SumR.io_vi_2 <-  0x53
+  POKE SumR.io_alphai_2 <-  0x198
+  POKE SumR.io_vi_3 <-  0xafc
+  POKE SumR.io_alphai_3 <-  0x62a
+  POKE SumR.io_vi_4 <-  0x48
+  POKE SumR.io_alphai_4 <-  0xbd9
+  POKE SumR.io_vi_5 <-  0x873
+  POKE SumR.io_alphai_5 <-  0x1fa
+  POKE SumR.io_vi_6 <-  0x104
+  POKE SumR.io_alphai_6 <-  0x5b9
+  POKE SumR.io_vi_7 <-  0x62
+  POKE SumR.io_alphai_7 <-  0x37
+  PEEK SumR.io_sumR -> 0x4825
+EXPECT SumR.io_sumR <- 18469 == 25120 FAIL
+  POKE SumR.io_vi_0 <-  0x2a0
+  POKE SumR.io_alphai_0 <-  0x0
+  POKE SumR.io_vi_1 <-  0x290
+  POKE SumR.io_alphai_1 <-  0x8ba
+  POKE SumR.io_vi_2 <-  0x13c
+  POKE SumR.io_alphai_2 <-  0x296
+  POKE SumR.io_vi_3 <-  0x239
+  POKE SumR.io_alphai_3 <-  0x545
+  POKE SumR.io_vi_4 <-  0x80f
+  POKE SumR.io_alphai_4 <-  0x1d4
+  POKE SumR.io_vi_5 <-  0x648
+  POKE SumR.io_alphai_5 <-  0x41
+  POKE SumR.io_vi_6 <-  0x196
+  POKE SumR.io_alphai_6 <-  0x2c9
+  POKE SumR.io_vi_7 <-  0x241
+  POKE SumR.io_alphai_7 <-  0x2af
+  PEEK SumR.io_sumR -> 0x2543
+EXPECT SumR.io_sumR <- 9539 == 16397 FAIL
+  POKE SumR.io_vi_0 <-  0xdd
+  POKE SumR.io_alphai_0 <-  0xb1
+  POKE SumR.io_vi_1 <-  0x1a9
+  POKE SumR.io_alphai_1 <-  0x81a
+  POKE SumR.io_vi_2 <-  0xc1
+  POKE SumR.io_alphai_2 <-  0x9
+  POKE SumR.io_vi_3 <-  0x402
+  POKE SumR.io_alphai_3 <-  0x276
+  POKE SumR.io_vi_4 <-  0x55
+  POKE SumR.io_alphai_4 <-  0xb31
+  POKE SumR.io_vi_5 <-  0x2e
+  POKE SumR.io_alphai_5 <-  0x8ef
+  POKE SumR.io_vi_6 <-  0xab
+  POKE SumR.io_alphai_6 <-  0xb0
+  POKE SumR.io_vi_7 <-  0xb3
+  POKE SumR.io_alphai_7 <-  0xbb2
+  PEEK SumR.io_sumR -> 0x17ed
+EXPECT SumR.io_sumR <- 6125 == 9700 FAIL
+  POKE SumR.io_vi_0 <-  0x69b
+  POKE SumR.io_alphai_0 <-  0x708
+  POKE SumR.io_vi_1 <-  0x5fb
+  POKE SumR.io_alphai_1 <-  0x3f
+  POKE SumR.io_vi_2 <-  0x85d
+  POKE SumR.io_alphai_2 <-  0xde
+  POKE SumR.io_vi_3 <-  0x3eb
+  POKE SumR.io_alphai_3 <-  0x601
+  POKE SumR.io_vi_4 <-  0x749
+  POKE SumR.io_alphai_4 <-  0x501
+  POKE SumR.io_vi_5 <-  0x723
+  POKE SumR.io_alphai_5 <-  0x0
+  POKE SumR.io_vi_6 <-  0x195
+  POKE SumR.io_alphai_6 <-  0x7e
+  POKE SumR.io_vi_7 <-  0x9e8
+  POKE SumR.io_alphai_7 <-  0x154
+  PEEK SumR.io_sumR -> 0x4eae
+EXPECT SumR.io_sumR <- 20142 == 33045 FAIL
+  POKE SumR.io_vi_0 <-  0x656
+  POKE SumR.io_alphai_0 <-  0x1ba
+  POKE SumR.io_vi_1 <-  0x71d
+  POKE SumR.io_alphai_1 <-  0x0
+  POKE SumR.io_vi_2 <-  0x9c2
+  POKE SumR.io_alphai_2 <-  0xb9
+  POKE SumR.io_vi_3 <-  0xab0
+  POKE SumR.io_alphai_3 <-  0x0
+  POKE SumR.io_vi_4 <-  0x66f
+  POKE SumR.io_alphai_4 <-  0x89e
+  POKE SumR.io_vi_5 <-  0x294
+  POKE SumR.io_alphai_5 <-  0x6ef
+  POKE SumR.io_vi_6 <-  0x0
+  POKE SumR.io_alphai_6 <-  0x50e
+  POKE SumR.io_vi_7 <-  0x7ab
+  POKE SumR.io_alphai_7 <-  0x59
+  PEEK SumR.io_sumR -> 0x11fd
+EXPECT SumR.io_sumR <- 4605 == 24060 FAIL
+RAN 0 CYCLES FAILED FIRST AT CYCLE 0
+*** FAILED ***
+[error] (run-main-0) Chisel.ChiselException: Module under test FAILED at least one test vector.
+Chisel.ChiselException: Module under test FAILED at least one test vector.
+	at OLK.Top$.main(top.scala:22)
+[trace] Stack trace suppressed: run 'last root/compile:run' for the full output.
+java.lang.RuntimeException: Nonzero exit code: 1
+	at scala.sys.package$.error(package.scala:27)
+[trace] Stack trace suppressed: run 'last root/compile:run' for the full output.
+[error] (root/compile:run) Nonzero exit code: 1
+[error] Total time: 2 s, completed 22/06/2015 1:37:06 PM

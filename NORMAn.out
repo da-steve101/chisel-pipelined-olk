@@ -1,0 +1,9 @@
+[info] Loading project definition from /home/duncan/repos/hardware/chisel-pipelined-olk/project
+[info] Set current project to chisel-pipelined-olk (in build file:/home/duncan/repos/hardware/chisel-pipelined-olk/)
+[info] Compiling 1 Scala source to /home/duncan/repos/hardware/chisel-pipelined-olk/target/scala-2.10/classes...
+[error] /home/duncan/repos/hardware/chisel-pipelined-olk/src/main/scala/Sum/SumR.scala:103: object MutableList is not a member of package collection
+[error]     val sumrTree = scala.collection.MutableList(wiList)
+[error]                                     ^
+[error] one error found
+[error] (root/compile:compileIncremental) Compilation failed
+[error] Total time: 3 s, completed 22/06/2015 1:39:49 PM

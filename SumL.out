@@ -1,0 +1,14 @@
+[info] Loading project definition from /home/duncan/repos/hardware/chisel-pipelined-olk/project
+[info] Set current project to chisel-pipelined-olk (in build file:/home/duncan/repos/hardware/chisel-pipelined-olk/)
+[info] Compiling 1 Scala source to /home/duncan/repos/hardware/chisel-pipelined-olk/target/scala-2.10/classes...
+[error] /home/duncan/repos/hardware/chisel-pipelined-olk/src/main/scala/Sum/SumR.scala:43: not found: type ArrayBuffer
+[error] class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, val stages : ArrayBuffer[Boolean]) extends Module {
+[error]                                                                                            ^
+[error] /home/duncan/repos/hardware/chisel-pipelined-olk/src/main/scala/Sum/SumR.scala:113: type mismatch;
+[error]  found   : Chisel.Vec[cla.types.Fixed]
+[error]  required: List[cla.types.Fixed]
+[error]             spareTree += spare
+[error]                          ^
+[error] two errors found
+[error] (root/compile:compileIncremental) Compilation failed
+[error] Total time: 3 s, completed 22/06/2015 1:52:33 PM
