@@ -44,7 +44,7 @@ dreamer: $(addsuffix .hex, $(executables))
 
 verilog: $(addsuffix .v, $(executables))
 
-$(staging_dirs)/%.stage:
+%.stage:
 	cd $(@D); git pull
 
 download: $(staging_targets)
