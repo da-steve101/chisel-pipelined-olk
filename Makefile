@@ -20,6 +20,7 @@ top_srcdir ?= .
 srcdir ?= src/main/scala/*
 executables := $(filter-out top, $(notdir $(basename $(wildcard $(srcdir)/*.scala))))
 outs := $(addsuffix .out, $(executables))
+source_files := $(wildcard $(srcdir)/*.scala)
 
 default: emulator
 
@@ -41,13 +42,13 @@ verilog: $(addsuffix .v, $(executables))
 # We should be able to do this with .POSIX: or .SHELLFLAGS but they don't
 # appear to be support by Make 3.81
 
-%.out: $(srcdir)/%.scala
+%.out: $(srcdir)/%.scala $(source_files)
 	set -e pipefail; $(SBT) $(SBT_FLAGS) "run $(notdir $(basename $<)) --genHarness --compile --test --backend c --vcd $(CHISEL_FLAGS)" | tee $@
 
-%.hex: $(srcdir)/%.scala
+%.hex: $(srcdir)/%.scala $(source_files)
 	$(SBT) $(SBT_FLAGS) "run $(notdir $(basename $<)) --backend flo --genHarness --compile --test $(CHISEL_FLAGS)"
 
-%.v: $(srcdir)/%.scala
+%.v: $(srcdir)/%.scala $(source_files)
 	$(SBT) $(SBT_FLAGS) "run $(notdir $(basename $<)) --genHarness --backend v $(CHISEL_FLAGS)"
 
 smoke:
