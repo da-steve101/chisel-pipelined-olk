@@ -1,7 +1,7 @@
 package OLK.AlphaCalc
 
 import Chisel._
-import cla.types._
+
 
 /** AlphaFunctOLKn
   This file computes the following:

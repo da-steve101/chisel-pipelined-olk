@@ -1,7 +1,7 @@
 package OLK.NORMAStage
 
 import Chisel._
-import cla.types._
+
 
 /** NORMAr
   Note: using e-insensitive loss but renamed epsilon to rho

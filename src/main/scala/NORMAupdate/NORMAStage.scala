@@ -1,7 +1,7 @@
 package OLK.NORMAStage
 
 import Chisel._
-import cla.types._
+
 
 class IOBundle(val bitWidth : Int, val fracWidth : Int) extends Bundle {
   val sum    = Fixed(INPUT, bitWidth, fracWidth)

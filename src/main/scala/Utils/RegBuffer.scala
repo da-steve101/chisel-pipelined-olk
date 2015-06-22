@@ -2,7 +2,7 @@ package OLK.Utils
 
 import Chisel._
 import scala.collection.mutable.ArrayBuffer
-import cla.types._
+
 
 /**
   This class delays a signal by 'stages' cycles

@@ -1,7 +1,7 @@
 package OLK.NORMAStage
 
 import Chisel._
-import cla.types._
+
 
 /** NORMAc
   This file computes the following 

@@ -2,7 +2,7 @@ package OLK.Dict
 
 import Chisel._
 import scala.collection.mutable.ArrayBuffer
-import cla.types._
+
 
 /** Dict
   This file manages the Dictionary

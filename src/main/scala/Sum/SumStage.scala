@@ -2,7 +2,7 @@ package OLK.Sum
 
 import Chisel._
 import scala.collection.mutable.ArrayBuffer
-import cla.types._
+
 
 /** SumStage
   This file implements the summation stage

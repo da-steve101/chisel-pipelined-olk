@@ -1,7 +1,7 @@
 package OLK.NORMAStage
 
 import Chisel._
-import cla.types._
+
 
 /** NORMAn
   rho = (rho - ft > 0) ? (rho - eta*(1-nu)) : (rho + eta*nu)
