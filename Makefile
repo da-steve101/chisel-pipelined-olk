@@ -29,6 +29,8 @@ all: emulator verilog # dreamer
 clean:
 	-rm -f *.h *.hex *.flo *.cpp *.o *.out *.v *.vcd $(executables)
 	-rm -rf project/target/ target/
+
+cleanall: clean
 	-rm -rf ~/.sbt/0.13/staging/*
 
 emulator: $(outs)
@@ -54,4 +56,4 @@ verilog: $(addsuffix .v, $(executables))
 smoke:
 	$(SBT) $(SBT_FLAGS) compile
 
-.PHONY: all check clean emulator verilog smoke
+.PHONY: all check clean cleanall emulator verilog smoke
