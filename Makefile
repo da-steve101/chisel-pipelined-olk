@@ -22,6 +22,11 @@ executables := $(filter-out top, $(notdir $(basename $(wildcard $(srcdir)/*.scal
 outs := $(addsuffix .out, $(executables))
 source_files := $(wildcard $(srcdir)/*.scala)
 
+# Handle staging.
+staging_dir := ~/.sbt/0.13/staging
+staging_dirs := $(foreach dir, $(wildcard $(staging_dir)/*), $(wildcard $(dir)/*)) # Get the directory of each staging project.
+staging_targets := $(addsuffix /update.stage, $(staging_dirs)) # Add a phoney target to staging dir.
+
 default: emulator
 
 all: emulator verilog # dreamer
@@ -31,13 +36,18 @@ clean:
 	-rm -rf project/target/ target/
 
 cleanall: clean
-	-rm -rf ~/.sbt/0.13/staging/*
+	-rm -rf $(staging_dir)/*
 
 emulator: $(outs)
 
 dreamer: $(addsuffix .hex, $(executables))
 
 verilog: $(addsuffix .v, $(executables))
+
+$(staging_dirs)/%.stage:
+	cd $(@D); git pull
+
+download: $(staging_targets)
 
 # We need to set the shell options -e -o pipefail here or the exit
 # code will be the exit code of the last element of the pipeline - the tee.
@@ -56,4 +66,4 @@ verilog: $(addsuffix .v, $(executables))
 smoke:
 	$(SBT) $(SBT_FLAGS) compile
 
-.PHONY: all check clean cleanall emulator verilog smoke
+.PHONY: all check clean cleanall emulator verilog smoke download
