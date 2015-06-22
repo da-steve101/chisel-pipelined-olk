@@ -1,20 +1,21 @@
 package OLK.Sum
 
 import Chisel._
-import OLK._
+import scala.collection.mutable.ArrayBuffer
+import cla.types._
 
 /** SumL
   This block sums the stages in the pipeline
   parameter s : stages
   
-  input z_i => SFix[s+1]
-  input alpha => SFix
+  input z_i => Fixed[s+1]
+  input alpha => Fixed
   input 1/(1+r) => Constant
   input addToDict => 1 Bit
   
-  output z_p1 => SFix
-  output zp   => SFix
-  output sumL => SFix
+  output z_p1 => Fixed
+  output zp   => Fixed
+  output sumL => Fixed
   
   Registers:
   Stage_0[s+1], Stage_1[s], ... Stage_(s-1)[2]
@@ -32,28 +33,50 @@ import OLK._
   sumL = SumL_(s-1)
   
   */
-//class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int) extends Module {
-  //val io = new Bundle {
-    //val z      = Vec.fill(stages + 2){Fixed(INPUT, bitWidth, fracWidth)}
-    //val alpha  = Fixed(INPUT, bitWidth, fracWidth)
-    //val forget = Fixed(INPUT, bitWidth, fracWidth)
-    //val addToDict = Bool(INPUT)
+class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int, val isNORMA : Boolean) extends Module {
+  Predef.assert(stages > 0, "There must be atleast one stage")
+  val io = new Bundle {
+    val z      = Vec.fill(stages + 2){Fixed(INPUT, bitWidth, fracWidth)}
+    val alpha  = Fixed(INPUT, bitWidth, fracWidth)
+    val forget = Fixed(INPUT, bitWidth, fracWidth)
+    val addToDict = Bool(INPUT)
 
-    //val zp1    = Fixed(OUTPUT, bitWidth, fracWidth)
-    //val zp     = Fixed(OUTPUT, bitWidth, fracWidth)
-    //val sumL   = Fixed(OUTPUT, bitWidth, fracWidth)
-  //}
-  //assert(stages > 0)
-  //val zero        = Fixed(0, bitWidth, fracWidth)
+    val forgetPowQ  = Fixed(OUTPUT, bitWidth, fracWidth)
+    val forgetPowQ1 = Fixed(OUTPUT, bitWidth, fracWidth)
+    val zp1    = Fixed(OUTPUT, bitWidth, fracWidth)
+    val zp     = Fixed(OUTPUT, bitWidth, fracWidth)
+    val sumL   = Fixed(OUTPUT, bitWidth, fracWidth)
+  }
+  val zero        = Fixed(0.0, bitWidth, fracWidth)
 
-  //// Registers
-  //val stageAry = Array()
-  //for (s <- 0 until stages) {
-    //// Generate stage tree with one decreasing each stage
-    //stageAry :+= Vec.fill(stages + 1 - s){Reg(init=zero)}
-  //}
-  //val sumLStages = Vec.fill(stages){Reg(init=zero)}
-  //val sumLCalc   = Vec.fill(stages){zero}
+  // Registers
+  val stageAry = new ArrayBuffer[Vec[Fixed]]()
+  for (s <- 0 until stages) {
+    // Generate stage tree with one decreasing each stage
+    stageAry += Vec.fill(stages + 1 - s){Reg(init=zero)}
+  }
+  val sumLStages = Vec.fill(stages){Reg(init=zero)}
+  val sumLCalc   = Vec.fill(stages){zero}
+  val forgetPow  = Vec.fill(stages - 1){Reg(init=zero)}
+  val forgetPowSq = Reg(init=zero)
+  val forgetPowQ  = Reg(init=zero)
+  val forgetPowQ1 = Reg(init=zero)
+  forgetPowSq    := io.forget*io.forget
+  if (isNORMA) {
+    io.forgetPowQ  := io.forget*forgetPow(stages -2)
+    io.forgetPowQ1 := forgetPowSq*forgetPow(stages -2)
+    forgetPow(0)   := io.forget
+    for (s <- 1 until (stages - 1)) {
+      forgetPow(s) := io.forget*forgetPow(s - 1)
+    }
+  } else {
+    io.forgetPowQ  := Mux(io.addToDict, io.forget*forgetPow(stages -2), forgetPow(stages - 2))
+    io.forgetPowQ1 := Mux(io.addToDict, forgetPowSq*forgetPow(stages -2), forgetPow(stages - 2))
+    forgetPow(0)   := Mux(io.addToDict, io.forget, Fixed(1.0, bitWidth, fracWidth))
+    for (s <- 1 until (stages - 1)) {
+      forgetPow(s) := Mux(io.addToDict, io.forget*forgetPow(s - 1), forgetPow(s - 1))
+    }
+  }
 
   //// Forward all unused Z vals to next stage
   //for (s <- 0 until (stages + 1)) {
@@ -84,28 +107,28 @@ import OLK._
   //io.sumL := sumLStages(stages - 1)
 //}
 
-//class SumLTests(c : SumL) extends Tester(c) { 
-  //poke(c.io.forget.raw, BigInt(1 << (c.bitWidth - c.fracWidth)))
-  //poke(c.io.addToDict, Bool(false).litValue())
+class SumLTests(c : SumL) extends Tester(c) { 
+  poke(c.io.forget, BigInt(1 << (c.fracWidth)))
+  poke(c.io.addToDict, Bool(false).litValue())
 
-  //val z = 1 << (c.bitWidth - c.fracWidth)
-  //val alpha = 3 << (c.bitWidth - c.fracWidth - 2) // 0.75
-  //val forget = 1 << (c.bitWidth - c.fracWidth - 1) // 0.5
+  val z = 1 << (c.fracWidth)
+  val alpha = 3 << (c.fracWidth - 2) // 0.75
+  val forget = 1 << (c.fracWidth - 1) // 0.5
 
-  //for (s <- 0 until (c.stages + 2))
-    //poke(c.io.z(s).raw, BigInt(z))
+  for (s <- 0 until (c.stages + 2))
+    poke(c.io.z(s), BigInt(z))
 
-  //// Check that z and sum propogates
-  //step(c.stages)
-  //expect(c.io.zp1.raw, BigInt(z))
-  //expect(c.io.zp.raw, BigInt(z))
-  //expect(c.io.sumL.raw, BigInt(0))
+  // Check that z and sum propogates
+  step(c.stages)
+  expect(c.io.zp1, BigInt(z))
+  expect(c.io.zp, BigInt(z))
+  expect(c.io.sumL, BigInt(0))
 
-  //// Check the sum is calculated properly
-  //var sumL = BigInt(0)
-  //for (s <- 0 until c.stages)
-    //sumL = (sumL >> 1) + BigInt(alpha)
-  //poke(c.io.addToDict, Bool(true).litValue())
-  //step(c.stages)
-  //expect(c.io.sumL.raw, sumL)
-//}
+  // Check the sum is calculated properly
+  var sumL = BigInt(0)
+  for (s <- 0 until c.stages)
+    sumL = (sumL >> 1) + BigInt(alpha)
+  poke(c.io.addToDict, Bool(true).litValue())
+  step(c.stages)
+  expect(c.io.sumL, sumL)
+}
