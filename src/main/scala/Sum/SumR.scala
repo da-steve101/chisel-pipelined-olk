@@ -2,6 +2,7 @@ package OLK.Sum
 
 import Chisel._
 import OLK._
+import scala.collection.mutable.ArrayBuffer
 import cla.types._
 
 /** SumR

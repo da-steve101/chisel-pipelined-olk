@@ -105,7 +105,7 @@ class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int, val isNORM
     //}
   //}
   //io.sumL := sumLStages(stages - 1)
-//}
+}
 
 class SumLTests(c : SumL) extends Tester(c) { 
   poke(c.io.forget, BigInt(1 << (c.fracWidth)))

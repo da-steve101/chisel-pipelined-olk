@@ -1,11 +1,7 @@
 package OLK.Dict
 
 import Chisel._
-<<<<<<< HEAD
-import OLK._
-=======
 import scala.collection.mutable.ArrayBuffer
->>>>>>> master
 import cla.types._
 
 /** Dict
