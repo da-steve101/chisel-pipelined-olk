@@ -4,15 +4,15 @@ SBT_FLAGS ?= -Dsbt.log.noformat=true
 # If a chiselVersion is defined, use that.
 # Otherwise, if we're making either "smoke" or "check" use the snapshot.
 # Otherwise, use the latest release.
-ifneq (,$(chiselVersion))
-	SBT_FLAGS += -DchiselVersion="$(chiselVersion)"
-else
-	ifneq (,$(filter smoke check,$(MAKECMDGOALS)))
-		SBT_FLAGS += -DchiselVersion="2.3-SNAPSHOT"
-	else
-		SBT_FLAGS += -DchiselVersion="latest.release"
-	endif
-endif
+#ifneq (,$(chiselVersion))
+#	SBT_FLAGS += -DchiselVersion="$(chiselVersion)"
+#else
+#	ifneq (,$(filter smoke check,$(MAKECMDGOALS)))
+#		SBT_FLAGS += -DchiselVersion="2.3-SNAPSHOT"
+#	else
+#		SBT_FLAGS += -DchiselVersion="latest.release"
+#	endif
+#endif
 
 CHISEL_FLAGS :=
 
