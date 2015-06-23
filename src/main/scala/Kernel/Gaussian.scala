@@ -2,7 +2,6 @@ package OLK.Kernel
 
 import Chisel._
 import OLK._
-import cla.types._
 import scala.collection.mutable.ArrayBuffer
 
 /** Kernel

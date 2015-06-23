@@ -18,6 +18,7 @@ CHISEL_FLAGS :=
 
 top_srcdir ?= .
 srcdir ?= src/main/scala/*
+top_file := src/main/scala/top.scala
 executables := $(filter-out top, $(notdir $(basename $(wildcard $(srcdir)/*.scala))))
 outs := $(addsuffix .out, $(executables))
 source_files := $(wildcard $(srcdir)/*.scala)
@@ -54,7 +55,7 @@ download: $(staging_targets)
 # We should be able to do this with .POSIX: or .SHELLFLAGS but they don't
 # appear to be support by Make 3.81
 
-%.out: $(srcdir)/%.scala $(source_files)
+%.out: $(srcdir)/%.scala $(source_files) $(top_file)
 	set -e pipefail; $(SBT) $(SBT_FLAGS) "run $(notdir $(basename $<)) --genHarness --compile --test --backend c --vcd $(CHISEL_FLAGS)" | tee $@
 
 %.hex: $(srcdir)/%.scala $(source_files)
