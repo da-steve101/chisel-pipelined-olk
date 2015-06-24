@@ -3,7 +3,6 @@ package OLK.Sum
 import Chisel._
 import scala.collection.mutable.ArrayBuffer
 
-
 /** SumStage
   This file implements the summation stage
   using SumL and SumR
@@ -48,6 +47,12 @@ import scala.collection.mutable.ArrayBuffer
   */
 class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boolean],
   val dictSize : Int, val isNORMA : Boolean) extends Module {
+  def log2Dict : Int = { log2Up(dictSize) }
+  Predef.assert(stages.last == true, "The last stage must have a register")
+
+  val ZERO = Fixed(0, bitWidth, fracWidth)
+  val ONE  = Fixed(1.0, bitWidth, fracWidth)
+
   val io = new Bundle {
     val alphai = Vec.fill(dictSize){Fixed(INPUT, bitWidth, fracWidth)} // Weights in dictionary
     val zi     = Vec.fill(stages.count(_ == true) + 1){Fixed(INPUT, bitWidth, fracWidth)} // Pipelined inputs (newest is 0)
@@ -60,37 +65,47 @@ class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer
     val zp  = Fixed(OUTPUT, bitWidth, fracWidth)
     val wD  = Fixed(OUTPUT, bitWidth, fracWidth)
   }
-  val zero = Fixed(0, bitWidth, fracWidth)
-  val sumReg = Reg(init=zero)
-  val zpReg  = Reg(init=zero)
-  val wDReg  = Reg(init=zero)
-  io.sum := sumReg
+
+  val sumLStages = stages.dropRight(1).count(_ == true)
+  var sumL = ZERO
+  var sumLzp1 = io.zi(1)
+  var forgetPowQ  = ONE
+  var forgetPowQ1 = io.forget
+  val zpReg  = Reg(init=ZERO)
   io.zp  := zpReg
-  io.wD  := wDReg
 
-  val sumLModule = Module(new SumL(bitWidth, fracWidth, stages.count(_ == true) - 1, isNORMA))
-  sumLModule.io.z := io.zi
-  sumLModule.io.addToDict := io.addToDict
-  sumLModule.io.forget := io.forget
-  sumLModule.io.alpha := io.alpha
-  val sumL = sumLModule.io.sumL
-  val sumLzp1 = sumLModule.io.zp1
-  val forgetPowQ  = sumLModule.io.forgetPowQ
-  val forgetPowQ1 = sumLModule.io.forgetPowQ1
-  zpReg := sumLModule.io.zp
+  if (sumLStages > 0) {
+    val sumLModule = Module(new SumL(bitWidth, fracWidth, sumLStages, isNORMA))
+    sumLModule.io.z := io.zi
+    sumLModule.io.addToDict := io.addToDict
+    sumLModule.io.forget := io.forget
+    sumLModule.io.alpha := io.alpha
+    sumL = sumLModule.io.sumL
+    sumLzp1 = sumLModule.io.zp1
+    forgetPowQ  = sumLModule.io.forgetPowQ
+    forgetPowQ1 = sumLModule.io.forgetPowQ1
+    zpReg  := sumLModule.io.zp
+  } else {
+    zpReg := io.zi(0)
+  }
 
-  val sumrStages = stages.dropRight(1)
-  val sumRModule = Module(new SumR(bitWidth, fracWidth, dictSize, sumrStages))
+  val sumRModule = Module(new SumR(bitWidth, fracWidth, dictSize, stages.dropRight(1)))
   sumRModule.io.vi := io.vi
   sumRModule.io.alphai := io.alphai
   sumRModule.io.addToDict := io.addToDict
   val sumR = sumRModule.io.sumR
   val sumRwD1 = sumRModule.io.wD1
 
-  wDReg := Mux(io.addToDict, forgetPowQ1*sumRwD1, forgetPowQ*sumRModule.io.wD)
   val sumNotAdd = sumL + (forgetPowQ*(sumR + sumRwD1))
   val sumIsAdd  = (io.forget*sumL) + (io.alpha*sumLzp1) + (forgetPowQ1*sumR)
+
+  // Last stage registers
+  val sumReg = Reg(init=ZERO)
+  val wDReg  = Reg(init=ZERO)
   sumReg := Mux(io.addToDict, sumIsAdd, sumNotAdd)
+  io.sum := sumReg
+  wDReg  := Mux(io.addToDict, forgetPowQ1*sumRwD1, forgetPowQ*sumRModule.io.wD)
+  io.wD  := wDReg
 }
 
 class SumStageTests(c : SumStage) extends Tester(c) {
@@ -99,64 +114,95 @@ class SumStageTests(c : SumStage) extends Tester(c) {
   def toFixed(x : Int, fracWidth : Int) : BigInt = BigInt(scala.math.round(x*scala.math.pow(2, fracWidth)))
   val r = scala.util.Random
 
-  val cycles = 2*c.stages.length
-  val expectSum = ArrayBuffer.fill(c.stages.length)(0)
-  val expectzp  = ArrayBuffer.fill(c.stages.length)(0)
-  val expectwD  = ArrayBuffer.fill(c.stages.length)(0)
-  val addToDicts = ArrayBuffer.fill(cycles)(r.nextInt(2))
-  val alpha  = ArrayBuffer.fill(cycles)(r.nextInt(1 << (c.bitWidth/2)))
-  val forget = r.nextInt(1 << (c.bitWidth/2))
+  val activeStages = c.stages.count(_ == true)
+
+  val cycles     = 2*c.stages.length
+  val expectSum  = ArrayBuffer.fill(activeStages - 1)(0)
+  val expectzp   = ArrayBuffer.fill(activeStages - 1)(0)
+  val expectzp1  = ArrayBuffer.fill(activeStages - 1)(0)
+  val expectwD   = ArrayBuffer.fill(activeStages - 1)(0)
+  val expectwD1  = ArrayBuffer.fill(activeStages - 1)(0)
+  val sumLAry   = ArrayBuffer.fill(activeStages - 1)(0)
+  val sumRAry   = ArrayBuffer.fill(activeStages - 1)(0)
+  val wd1Ary    = ArrayBuffer.fill(activeStages - 1)(0)
+  val addToDicts = ArrayBuffer.fill(cycles + activeStages){ r.nextInt(2) == 1}
+  val alpha      = ArrayBuffer.fill(cycles + activeStages){r.nextInt(1 << ((2*c.fracWidth)/3))}
+  val forget     = r.nextInt(1 << c.fracWidth)
   poke(c.io.forget, BigInt(forget))
 
   for (cyc <- 0 until cycles) {
-    val alphai = ArrayBuffer.fill(c.dictSize)(r.nextInt(1 << (c.bitWidth/2)))
-    val zi     = ArrayBuffer.fill(c.stages.length + 1)(r.nextInt(1 << (c.bitWidth/2)))
-    val vi     = ArrayBuffer.fill(c.dictSize)(r.nextInt(1 << (c.bitWidth/2)))
-    val wi     = new ArrayBuffer[Int]()
-    val ui     = new ArrayBuffer[Int]()
-    for (d <- 0 until c.dictSize)
-      wi += (vi(d)*alphai(d)) >> c.fracWidth
-    if (cyc < cycles - c.stages.length) {
-      for (s <- 0 until c.stages.length)
-        ui += (zi(s + 1)*alpha(cyc + s)) >> c.fracWidth
-      // calculate wD
-      var sumDicts = 0
-      for (i <- cyc until (cyc + c.stages.length)) {
-        sumDicts = sumDicts + addToDicts(i)
-      }
-      var wD = wi(c.dictSize - 1 - sumDicts)
-      for (i <- 0 until sumDicts)
-        wD  = (wD*forget) >> c.fracWidth
-      expectwD += wD
+    val alphai = ArrayBuffer.fill(c.dictSize)(r.nextInt(1 << ((2*c.fracWidth)/3)))
+    val zi     = ArrayBuffer.fill(activeStages + 1)(r.nextInt(1 << ((2*c.fracWidth)/3)))
+    val vi     = ArrayBuffer.fill(c.dictSize)(r.nextInt(1 << ((2*c.fracWidth)/3)))
 
-      // calculate what the sum will be in c.stages time
-      var sum = 0
-      for (i <- 0 until (c.dictSize -1 - sumDicts))
-        sum = sum + wi(i)
-      for (i <- 0 until c.stages.length) {
-        if (addToDicts(cyc + i) == 1) 
-          sum = ((forget*sum) >> c.fracWidth) + ui(c.stages.length - 1 - i)
-        else {
-          if (c.isNORMA)
-            sum = ((forget*sum) >> c.fracWidth)
+    val forgetPowQ = {
+      var sum = 1 << c.fracWidth
+      for (i <- 0 until (activeStages - 1)){
+        if ( c.isNORMA ) {
+          sum = (forget*sum) >> c.fracWidth
+        } else {
+          if ( addToDicts(cyc + i) )
+            sum = (forget*sum) >> c.fracWidth
         }
       }
-      expectSum += sum
+      sum
     }
-    expectzp += zi(0)
+    val forgetPowQ1 = (forget*forgetPowQ) >> c.fracWidth
 
-    poke(c.io.addToDict, Bool(addToDicts(cyc) == 1).litValue())
+    // multiply with alpha
+    val ui = (zi zip alpha.drop(cyc).take(activeStages + 1).reverse).map(pair => { (pair._1 * pair._2) >> c.fracWidth } )
+    val wi = (vi zip alphai).map(pair => { (pair._1 * pair._2) >> c.fracWidth } )
+
+    val zp = zi(0)
+    val zp1 = zi(1)
+    val activeDicts = addToDicts.drop(cyc).take(activeStages - 1)
+    val totalAdd = activeDicts.count(_ == true)
+    val wd  = wi(wi.length - 1 - totalAdd)
+    val wD1 = wi(wi.length - 2 - totalAdd)
+    val sumR = wi.dropRight(totalAdd + 2).sum
+    val sumLAry = ui.drop(2)
+
+    var sumL = 0
+    for ( i <- 0 until sumLAry.length ) {
+      if ( addToDicts(cyc + i) )
+        sumL =  ((forget*sumL) >> c.fracWidth) + sumLAry(sumLAry.length - 1 - i)
+      else {
+        if ( c.isNORMA )
+          sumL = (forget*sumL) >> c.fracWidth
+      }
+    }
+
+    expectzp += zp
+    expectzp1 += zp1
+    expectwD += {
+      if ( addToDicts(cyc + activeStages - 1) )
+        (wD1*forgetPowQ1) >> c.fracWidth
+      else
+        (wd*forgetPowQ) >> c.fracWidth
+    }
+    expectwD1 += wD1
+    expectSum += {
+      if ( addToDicts(cyc + activeStages - 1) ) {
+        ((forget*sumL) >> c.fracWidth) + ((forgetPowQ1*sumR) >> c.fracWidth) +
+          ((alpha(cyc + activeStages - 1)*expectzp1(cyc + activeStages - 1)) >> c.fracWidth)
+      } else
+        sumL + ((forgetPowQ*(sumR + expectwD1(cyc + activeStages - 1))) >> c.fracWidth)
+    }
+
+    poke(c.io.addToDict, Bool(addToDicts(cyc)).litValue())
     poke(c.io.alpha, BigInt(alpha(cyc)))
     for (d <- 0 until c.dictSize) {
       poke(c.io.alphai(d), BigInt(alphai(d)))
       poke(c.io.vi(d), BigInt(vi(d)))
     }
-    for (s <- 0 until (c.stages.length + 1))
+    for (s <- 0 until (activeStages + 1))
       poke(c.io.zi(s), zi(s))
 
     step(1)
-    expect(c.io.sum, BigInt(expectSum(cyc)))
-    expect(c.io.zp, BigInt(expectzp(cyc)))
-    expect(c.io.wD, BigInt(expectwD(cyc)))
+    if ( cyc > 2 ) {
+      expect(c.io.sum, BigInt(expectSum(cyc)))
+      expect(c.io.zp, BigInt(expectzp(cyc)))
+      expect(c.io.wD, BigInt(expectwD(cyc)))
+    }
   }
 }

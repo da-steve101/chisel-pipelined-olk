@@ -12,7 +12,7 @@ object Top extends stageCalc {
     def main(args: Array[String]): Unit = {
 
       val r = scala.util.Random
-      val dictSize = 1024
+      val dictSize = 1000
       var stages = ArrayBuffer.fill(30)( r.nextInt(2) == 1 )
       var calcStage = stages.length - 1
       while(stages.length != calcStage) {
@@ -21,10 +21,11 @@ object Top extends stageCalc {
           stages(stages.length - 2) = false
           calcStage = calculatedStages(dictSize, stages.count(_ == true), stages)
       }
+      stages.append(true)
       val isNorma = true
 
-      chiselMainTest(args, () => Module(new SumR(18, 12, dictSize, stages))) {
-        c => new SumRTests(c) }
+      chiselMainTest(args, () => Module(new SumStage(18, 12, stages, dictSize, isNorma))) {
+        c => new SumStageTests(c) }
   }
 
 }
