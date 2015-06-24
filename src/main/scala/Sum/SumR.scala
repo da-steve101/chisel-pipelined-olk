@@ -44,7 +44,7 @@ trait stageCalc {
   def calculatedStages(dictionarySize : Int, activeStages : Int, stages : ArrayBuffer[Boolean]) : Int = {
     var layerCount = dictionarySize - activeStages - 2
     var sum = 1
-    Predef.assert(!stages(stages.length - 1) && !stages(stages.length - 2), "Last two stages must be false")
+    Predef.assert(!stages.last, "Last stage must be false")
     if (stages(0)) layerCount += 1;
     var i = 1
     while ( layerCount > 1 ) {
@@ -126,16 +126,19 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
 
     // Build Adder Tree
     for (i <- 1 until n) {
-        val shiftDict = pipeline(stages(i))(Mux(io.addToDict, ZERO, spareTree.last.head))
-        val adderLevel = buildLevel(sumrTree.last.toList, pipeAdd(stages(i)), pipeline(stages(i)))
         if (stages(i)) {
+            val adderLevel = buildLevel(sumrTree.last.dropRight(1).toList, pipeAdd(stages(i)), pipeline(stages(i)))
+            val shiftDict = pipeline(stages(i))(Mux(io.addToDict, sumrTree.last.last, sumrTree.last.last + spareTree.last.head))
             sumrTree += adderLevel :+ shiftDict
             val spare = spareLevel(spareTree.last.toList).toList
             spareTree += spare.map(x => { pipeline(stages(i))(x) } )
         } else {
+            val adderLevel = buildLevel(sumrTree.last.toList, pipeAdd(stages(i)), pipeline(stages(i)))
             sumrTree += adderLevel
         }
     }
+    Predef.assert(sumrTree.dropRight(1).last.length == 2, "Second last stage in sum tree must have length of two")
+    Predef.assert(sumrTree.last.length == 1, "Last stage in sum tree must have length of one")
 
     // Output
     io.sumR := sumrTree.last.head
