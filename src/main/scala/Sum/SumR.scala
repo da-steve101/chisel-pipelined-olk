@@ -40,7 +40,27 @@ import scala.collection.mutable.ArrayBuffer
   wD   = Spare_(s-1)[1]
   */
 
-class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, val stages : ArrayBuffer[Boolean]) extends Module {
+trait stageCalc { 
+  def calculatedStages(dictionarySize : Int, log2Dict : Int, activeStages : Int, stages : ArrayBuffer[Boolean]) : Int = { (log2Dict + 1 + {
+    var layerCount = dictionarySize - activeStages - 2
+    var sum = 0
+    if (stages(0)) layerCount += 1; sum = 1
+    var i = 1
+    while ( layerCount > 1 ) {
+      if ( stages(i) ) {
+        layerCount += 1
+      }
+      layerCount = layerCount - (1 << (log2Up(layerCount) - 1))
+      Predef.assert(i < stages.length - 1, "Stages array is not long enough") 
+      sum += 1
+      i += 1
+    }
+    sum
+  })} // Only adds a stage if moved up to higher power of 2
+
+}
+
+class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, val stages : ArrayBuffer[Boolean]) extends Module with stageCalc {
     def log2Dict : Int = { log2Up(dictionarySize) }
   def activeStages : Int = { stages.count(_ == true) }
   def increasesStage(x : Int) : Boolean = {
@@ -49,23 +69,7 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
     else
       true
   }
-  def calculatedStages : Int = { (log2Dict + 1 + {
-    var layerCount = dictionarySize - activeStages - 2
-    var sum = 0
-    var i = 0
-    while ( layerCount > 1 ) {
-      if ( stages(i) ) {
-        if ( increasesStage(layerCount) )
-          sum += 1
-        layerCount += 1
-      }
-      layerCount = layerCount - (1 << (log2Up(layerCount) - 1))
-      Predef.assert(i < stages.length - 1, "Stages array is not long enough") 
-      i += 1
-    }
-    sum
-  })} // Only adds a stage if moved up to higher power of 2
-    Predef.assert(stages.length == calculatedStages, "Length of stages must be = " + (calculatedStages))
+    Predef.assert(stages.length == calculatedStages(dictionarySize, log2Dict, activeStages, stages), "Length of stages must be = " + (calculatedStages(dictionarySize, log2Dict, activeStages, stages)))
 
     def group[A](list : List[A], size : Int) : List[List[A]] = list.foldLeft( (List[List[A]](), 0) ) { (r, c) => 
         r match {
@@ -76,11 +80,13 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
         }
     }._1.foldLeft(List[List[A]]())( (r,c) => c.reverse :: r)
 
-    def buildLevel[A](list : List[A], op : (A, A) => A) : List[A] = group(list, 2).map(l => l.reduce[A](op(_,_)))
+    def buildLevel[A](list : List[A], op : (A, A) => A, op2 : A => A) : List[A] = group(list, 2).map(l =>  {
+        if (l.length == 1) op2(l(0))
+        else l.reduce[A](op(_,_))})
 
-    def pipeline(wire : Fixed, hasStage : Boolean) = if (hasStage) Reg(init=Fixed(0, wire.getWidth(), wire.fractionalWidth), next=wire) else wire
+    def pipeline(hasStage : Boolean)(wire : Fixed) = if (hasStage) Reg(init=Fixed(0, wire.getWidth(), wire.fractionalWidth), next=wire) else wire
 
-    def pipeAdd(hasStage : Boolean)(a : Fixed, b : Fixed) : Fixed = pipeline(a + b, hasStage)
+    def pipeAdd(hasStage : Boolean)(a : Fixed, b : Fixed = ZERO) : Fixed = pipeline(hasStage)(a + b)
 
     val lnOf2 = scala.math.log(2)
     def log2(x : Int) : Int = (scala.math.log(x.toDouble) / lnOf2).toInt
@@ -109,7 +115,7 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
 
     // wi = vi.*alphai
     val wiList = (viList, alphaiList).zipped.map(_*_)
-    val wiListPipe = wiList.map( x => { pipeline(x, stages(0)) } )
+    val wiListPipe = wiList.map( x => { pipeline(stages(0))(x) } )
 
     val n = stages.length
 
@@ -117,8 +123,8 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
     var spareInput = wiListPipe.drop(dictionarySize - activeStages - 2)
 
     if ( stages(0) ) {
-      sumrInput = sumrInput :+ pipeline(Mux(io.addToDict, ZERO, wiList(dictionarySize - activeStages - 2)), stages(0))
-      spareInput = spareLevel( wiList.drop(dictionarySize - activeStages - 2)).toList.map( x => { pipeline(x, stages(0)) } )
+      sumrInput = sumrInput :+ pipeline(stages(0))(Mux(io.addToDict, ZERO, wiList(dictionarySize - activeStages - 2)))
+      spareInput = spareLevel( wiList.drop(dictionarySize - activeStages - 2)).toList.map( x => { pipeline(stages(0))(x) } )
     }
 
     val sumrTree = scala.collection.mutable.MutableList(sumrInput)
@@ -126,20 +132,15 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
 
     // Build Adder Tree
     for (i <- 1 until n) {
-        val shiftDict = Mux(io.addToDict, ZERO, spareTree.last.head)
-        val adderLevel = {
-          if ( stages(i - 1) )
-            buildLevel(sumrTree.last.toList :+ shiftDict, pipeAdd(stages(i)))
-          else
-            buildLevel(sumrTree.last.toList, pipeAdd(stages(i)))
-        }
+        val shiftDict = pipeline(stages(i))(Mux(io.addToDict, ZERO, spareTree.last.head))
+        val adderLevel = buildLevel(sumrTree.last.toList, pipeAdd(stages(i)), pipeline(stages(i)))
         if (stages(i)) {
             print(spareTree.last.length + "\n")
             print(sumrTree.last.length + "\n")
             print(adderLevel.length + "\n")
             sumrTree += adderLevel :+ shiftDict
             val spare = spareLevel(spareTree.last.toList).toList
-            spareTree += spare.map(x => { pipeline(x, stages(i)) } )
+            spareTree += spare.map(x => { pipeline(stages(i))(x) } )
         } else {
             sumrTree += adderLevel
         }
@@ -178,7 +179,7 @@ class SumRTests(c : SumR) extends Tester(c) {
 
   val cycles = 3*(activeStages + 2)
 
-  val addToDicts = ArrayBuffer.fill(cycles + activeStages + 1){ false }//r.nextInt(2) == 1}
+  val addToDicts = ArrayBuffer.fill(cycles + activeStages + 1){ false } // r.nextInt(2) == 1}
   val sumRAry = ArrayBuffer.fill(activeStages - 1){0}
   val wDAry   = ArrayBuffer.fill(activeStages - 1){0}
   val wD1Ary  = ArrayBuffer.fill(activeStages - 1){0}
