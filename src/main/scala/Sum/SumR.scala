@@ -41,7 +41,32 @@ import scala.collection.mutable.ArrayBuffer
   */
 
 class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, val stages : ArrayBuffer[Boolean]) extends Module {
-    
+    def log2Dict : Int = { log2Up(dictionarySize) }
+  def activeStages : Int = { stages.count(_ == true) }
+  def increasesStage(x : Int) : Boolean = {
+    if ( log2Up(x) == log2Up(x + 1) )
+      false
+    else
+      true
+  }
+  def calculatedStages : Int = { (log2Dict + 1 + {
+    var layerCount = dictionarySize - activeStages - 2
+    var sum = 0
+    var i = 0
+    while ( layerCount > 1 ) {
+      if ( stages(i) ) {
+        if ( increasesStage(layerCount) )
+          sum += 1
+        layerCount += 1
+      }
+      layerCount = layerCount - (1 << (log2Up(layerCount) - 1))
+      Predef.assert(i < stages.length - 1, "Stages array is not long enough") 
+      i += 1
+    }
+    sum
+  })} // Only adds a stage if moved up to higher power of 2
+    Predef.assert(stages.length == calculatedStages, "Length of stages must be = " + (calculatedStages))
+
     def group[A](list : List[A], size : Int) : List[List[A]] = list.foldLeft( (List[List[A]](), 0) ) { (r, c) => 
         r match {
             case (head :: tail, num) =>
@@ -61,7 +86,9 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
     def log2(x : Int) : Int = (scala.math.log(x.toDouble) / lnOf2).toInt
     def log2(x : Double) : Int = (scala.math.log(x) / lnOf2).toInt
 
-    def spareLevel(list : List[Fixed]) : Vec[Fixed] = Mux(io.addToDict, Vec(list.drop(1)), Vec(list.dropRight(1)))
+    def spareLevel(list : List[Fixed]) : Vec[Fixed] = Mux(io.addToDict, Vec(list.dropRight(1)), Vec(list.drop(1)))
+
+    val ZERO = Fixed(0, bitWidth, fracWidth)
 
     val io = new Bundle {
         val vi  = Vec.fill(dictionarySize){Fixed(INPUT, bitWidth, fracWidth)}
@@ -82,29 +109,61 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
 
     // wi = vi.*alphai
     val wiList = (viList, alphaiList).zipped.map(_*_)
+    val wiListPipe = wiList.map( x => { pipeline(x, stages(0)) } )
 
     val n = stages.length
 
-    val treeStart = wiList.map(a => pipeline(a, stages(0)))
+    var sumrInput = wiListPipe.dropRight(activeStages + 2)
+    var spareInput = wiListPipe.drop(dictionarySize - activeStages - 2)
 
-    val sumrTree = scala.collection.mutable.MutableList(wiList.dropRight(dictionarySize - stages.length - 1))
-    val spareTree = scala.collection.mutable.MutableList(wiList.drop(dictionarySize - stages.length - 1))
+    if ( stages(0) ) {
+      sumrInput = sumrInput :+ pipeline(Mux(io.addToDict, ZERO, wiList(dictionarySize - activeStages - 2)), stages(0))
+      spareInput = spareLevel( wiList.drop(dictionarySize - activeStages - 2)).toList.map( x => { pipeline(x, stages(0)) } )
+    }
+
+    val sumrTree = scala.collection.mutable.MutableList(sumrInput)
+    val spareTree = scala.collection.mutable.MutableList(spareInput)
+
     // Build Adder Tree
     for (i <- 1 until n) {
-        val adderLevel = buildLevel(sumrTree.last.toList, pipeAdd(stages(i)))
+        val shiftDict = Mux(io.addToDict, ZERO, spareTree.last.head)
+        val adderLevel = {
+          if ( stages(i - 1) )
+            buildLevel(sumrTree.last.toList :+ shiftDict, pipeAdd(stages(i)))
+          else
+            buildLevel(sumrTree.last.toList, pipeAdd(stages(i)))
+        }
         if (stages(i)) {
+            print(spareTree.last.length + "\n")
+            print(sumrTree.last.length + "\n")
+            print(adderLevel.length + "\n")
+            sumrTree += adderLevel :+ shiftDict
             val spare = spareLevel(spareTree.last.toList).toList
-            sumrTree += (adderLevel :+ spareTree.last.head)
-            spareTree += spare
+            spareTree += spare.map(x => { pipeline(x, stages(i)) } )
         } else {
             sumrTree += adderLevel
         }
     }
-
+  printf("sumrTree\n")
+  for (i <- 0 until sumrTree.length){
+    printf("{")
+    for (j <- 0 until sumrTree(i).length) {
+      printf("%d, ", sumrTree(i)(j)) 
+    }
+    printf("}\n")
+  }
+  printf("spareTree\n")
+  for (i <- 0 until spareTree.length){
+    printf("{")
+    for (j <- 0 until spareTree(i).length) {
+      printf("%d, ", spareTree(i)(j)) 
+    }
+    printf("}\n")
+  }
     // Output
     io.sumR := sumrTree.last.head
-    io.wD := spareTree.last.head
-    io.wD1 := spareTree.last.last
+    io.wD := spareTree.last.last
+    io.wD1 := spareTree.last.head
 }
 
 class SumRTests(c : SumR) extends Tester(c) {
@@ -115,15 +174,38 @@ class SumRTests(c : SumR) extends Tester(c) {
     def toFixed(x : Int, fracWidth : Int) : BigInt = BigInt(scala.math.round(x*scala.math.pow(2, fracWidth)))
     val r = scala.util.Random
 
-    for (i <- 0 to 10) {
-        val inVI = Array.fill(c.dictionarySize){r.nextInt(scala.math.pow(2, (c.bitWidth - c.fracWidth)/2).toInt) * r.nextFloat()}
-        val inAlphaI = Array.fill(c.dictionarySize){r.nextInt(scala.math.pow(2, (c.bitWidth - c.fracWidth)/2).toInt) * r.nextFloat()}
-        for (i <- 0 until c.dictionarySize) {
-            var fixedVI = toFixed(inVI(i), c.fracWidth)
-            var fixedAlphaI = toFixed(inAlphaI(i), c.fracWidth)
-            poke(c.io.vi(i), fixedVI)
-            poke(c.io.alphai(i), fixedAlphaI)
-        }
-        expect(c.io.sumR, toFixed((inVI zip inAlphaI).map(pair => pair._1 * pair._2).reduceLeft(_+_), c.fracWidth))
+  val activeStages = c.stages.count(_ == true)
+
+  val cycles = 3*(activeStages + 2)
+
+  val addToDicts = ArrayBuffer.fill(cycles + activeStages + 1){ false }//r.nextInt(2) == 1}
+  val sumRAry = ArrayBuffer.fill(activeStages - 1){0}
+  val wDAry   = ArrayBuffer.fill(activeStages - 1){0}
+  val wD1Ary  = ArrayBuffer.fill(activeStages - 1){0}
+  
+  for (cyc <- 0 until cycles) {
+    val inVI     = ArrayBuffer.fill(c.dictionarySize){r.nextInt(1 << c.fracWidth)}
+    val inAlphaI = ArrayBuffer.fill(c.dictionarySize){r.nextInt(1 << c.fracWidth)}
+
+    val wi = (inVI zip inAlphaI).map(pair => { (pair._1 * pair._2) >> c.fracWidth })
+    print("wi(" + cyc + "): " + wi + "\n")
+    val totalAdded = addToDicts.drop(cyc).take(activeStages).count(_ == true)
+
+    sumRAry += wi.dropRight(totalAdded + 2).sum
+    wDAry  += wi(wi.length - 1 - totalAdded)
+    wD1Ary += wi(wi.length - 2 - totalAdded)
+
+    poke(c.io.addToDict, Bool(addToDicts(cyc)).litValue())
+    for (i <- 0 until c.dictionarySize) {
+      poke(c.io.vi(i), BigInt(inVI(i)))
+      poke(c.io.alphai(i), BigInt(inAlphaI(i)))
     }
+
+    step(1)
+    if (cyc >= activeStages - 1) {
+      expect(c.io.sumR, BigInt(sumRAry(cyc)))
+      expect(c.io.wD, BigInt(wDAry(cyc)))
+      expect(c.io.wD1, BigInt(wD1Ary(cyc)))
+    }
+  }
 }
