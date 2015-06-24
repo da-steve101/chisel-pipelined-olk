@@ -41,35 +41,29 @@ import scala.collection.mutable.ArrayBuffer
   */
 
 trait stageCalc { 
-  def calculatedStages(dictionarySize : Int, log2Dict : Int, activeStages : Int, stages : ArrayBuffer[Boolean]) : Int = { (log2Dict + 1 + {
+  def calculatedStages(dictionarySize : Int, activeStages : Int, stages : ArrayBuffer[Boolean]) : Int = {
     var layerCount = dictionarySize - activeStages - 2
-    var sum = 0
-    if (stages(0)) layerCount += 1; sum = 1
+    var sum = 1
+    Predef.assert(!stages(stages.length - 1) && !stages(stages.length - 2), "Last two stages must be false")
+    if (stages(0)) layerCount += 1;
     var i = 1
     while ( layerCount > 1 ) {
-      if ( stages(i) ) {
+      Predef.assert(i < stages.length, "Stages array is not long enough") 
+      if ( stages(i) )
         layerCount += 1
-      }
-      layerCount = layerCount - (1 << (log2Up(layerCount) - 1))
-      Predef.assert(i < stages.length - 1, "Stages array is not long enough") 
+      layerCount = (layerCount >> 1) + (layerCount & 1)
       sum += 1
       i += 1
     }
     sum
-  })} // Only adds a stage if moved up to higher power of 2
-
+  } // Only adds a stage if moved up to higher power of 2
 }
 
 class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, val stages : ArrayBuffer[Boolean]) extends Module with stageCalc {
     def log2Dict : Int = { log2Up(dictionarySize) }
-  def activeStages : Int = { stages.count(_ == true) }
-  def increasesStage(x : Int) : Boolean = {
-    if ( log2Up(x) == log2Up(x + 1) )
-      false
-    else
-      true
-  }
-    Predef.assert(stages.length == calculatedStages(dictionarySize, log2Dict, activeStages, stages), "Length of stages must be = " + (calculatedStages(dictionarySize, log2Dict, activeStages, stages)))
+    def activeStages : Int = { stages.count(_ == true) }
+    Predef.assert(stages.length == calculatedStages(dictionarySize, activeStages, stages),
+      "Length of stages must be = " + (calculatedStages(dictionarySize, activeStages, stages)))
 
     def group[A](list : List[A], size : Int) : List[List[A]] = list.foldLeft( (List[List[A]](), 0) ) { (r, c) => 
         r match {
@@ -135,9 +129,6 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
         val shiftDict = pipeline(stages(i))(Mux(io.addToDict, ZERO, spareTree.last.head))
         val adderLevel = buildLevel(sumrTree.last.toList, pipeAdd(stages(i)), pipeline(stages(i)))
         if (stages(i)) {
-            print(spareTree.last.length + "\n")
-            print(sumrTree.last.length + "\n")
-            print(adderLevel.length + "\n")
             sumrTree += adderLevel :+ shiftDict
             val spare = spareLevel(spareTree.last.toList).toList
             spareTree += spare.map(x => { pipeline(stages(i))(x) } )
@@ -145,22 +136,7 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
             sumrTree += adderLevel
         }
     }
-  printf("sumrTree\n")
-  for (i <- 0 until sumrTree.length){
-    printf("{")
-    for (j <- 0 until sumrTree(i).length) {
-      printf("%d, ", sumrTree(i)(j)) 
-    }
-    printf("}\n")
-  }
-  printf("spareTree\n")
-  for (i <- 0 until spareTree.length){
-    printf("{")
-    for (j <- 0 until spareTree(i).length) {
-      printf("%d, ", spareTree(i)(j)) 
-    }
-    printf("}\n")
-  }
+
     // Output
     io.sumR := sumrTree.last.head
     io.wD := spareTree.last.last
@@ -179,7 +155,7 @@ class SumRTests(c : SumR) extends Tester(c) {
 
   val cycles = 3*(activeStages + 2)
 
-  val addToDicts = ArrayBuffer.fill(cycles + activeStages + 1){ false } // r.nextInt(2) == 1}
+  val addToDicts = ArrayBuffer.fill(cycles + activeStages + 1){ r.nextInt(2) == 1}
   val sumRAry = ArrayBuffer.fill(activeStages - 1){0}
   val wDAry   = ArrayBuffer.fill(activeStages - 1){0}
   val wD1Ary  = ArrayBuffer.fill(activeStages - 1){0}
@@ -189,7 +165,6 @@ class SumRTests(c : SumR) extends Tester(c) {
     val inAlphaI = ArrayBuffer.fill(c.dictionarySize){r.nextInt(1 << c.fracWidth)}
 
     val wi = (inVI zip inAlphaI).map(pair => { (pair._1 * pair._2) >> c.fracWidth })
-    print("wi(" + cyc + "): " + wi + "\n")
     val totalAdded = addToDicts.drop(cyc).take(activeStages).count(_ == true)
 
     sumRAry += wi.dropRight(totalAdded + 2).sum

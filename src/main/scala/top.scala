@@ -12,28 +12,18 @@ object Top extends stageCalc {
     def main(args: Array[String]): Unit = {
 
       val r = scala.util.Random
-      val log2dictSize = 4
-      var stages = ArrayBuffer.fill(log2dictSize + 20)( r.nextInt(2) == 1 ) ++ ArrayBuffer.fill(100)(false)
+      val dictSize = 1024
+      var stages = ArrayBuffer.fill(30)( r.nextInt(2) == 1 )
       var calcStage = stages.length - 1
-      var prevStage = stages.length
-      while(prevStage != calcStage) {
-          val activeStages = stages.count(_ == true)
-          prevStage = calcStage
-          calcStage = calculatedStages(log2dictSize, 1 << log2dictSize, activeStages, stages)
-          stages = stages.slice(0, calcStage)
+      while(stages.length != calcStage) {
+          stages = stages.dropRight(1)
+          stages(stages.length - 1) = false
+          stages(stages.length - 2) = false
+          calcStage = calculatedStages(dictSize, stages.count(_ == true), stages)
       }
       val isNorma = true
-      //stages(0) = true
-      //stages(1) = false
-      //stages(2) = true
-      //stages(3) = true
-      /*
-      stages(log2dictSize) = true
-      stages(log2dictSize + 1) = true
-      chiselMainTest(args, () => Module(new SumStage(18, 12, stages, 1 << log2dictSize, isNorma))) {
-        c => new SumStageTests(c) }
-       */
-      chiselMainTest(args, () => Module(new SumR(18, 12, 1 << log2dictSize, stages))) {
+
+      chiselMainTest(args, () => Module(new SumR(18, 12, dictSize, stages))) {
         c => new SumRTests(c) }
   }
 
