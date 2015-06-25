@@ -96,7 +96,12 @@ class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer
   val sumR = sumRModule.io.sumR
   val sumRwD1 = sumRModule.io.wD1
 
-  val sumNotAdd = sumL + (forgetPowQ*(sumR + sumRwD1))
+  val sumNotAdd =  {
+    if ( isNORMA )
+      (forgetPowQ1*(sumR + sumRwD1)) + io.forget*sumL
+    else
+      (forgetPowQ*(sumR + sumRwD1)) + sumL
+  }
   val sumIsAdd  = (io.forget*sumL) + (io.alpha*sumLzp1) + (forgetPowQ1*sumR)
 
   // Last stage registers
@@ -104,7 +109,12 @@ class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer
   val wDReg  = Reg(init=ZERO)
   sumReg := Mux(io.addToDict, sumIsAdd, sumNotAdd)
   io.sum := sumReg
-  wDReg  := Mux(io.addToDict, forgetPowQ1*sumRwD1, forgetPowQ*sumRModule.io.wD)
+  wDReg  := Mux(io.addToDict, forgetPowQ1*sumRwD1, {
+    if ( isNORMA )
+      forgetPowQ1*sumRModule.io.wD
+    else
+      forgetPowQ*sumRModule.io.wD
+  })
   io.wD  := wDReg
 }
 
@@ -178,7 +188,7 @@ class SumStageTests(c : SumStage) extends Tester(c) {
       if ( addToDicts(cyc + activeStages - 1) )
         (wD1*forgetPowQ1) >> c.fracWidth
       else
-        (wd*forgetPowQ) >> c.fracWidth
+        (wd*forgetPowQ1) >> c.fracWidth
     }
     expectwD1 += wD1
     expectSum += {
@@ -186,7 +196,10 @@ class SumStageTests(c : SumStage) extends Tester(c) {
         ((forget*sumL) >> c.fracWidth) + ((forgetPowQ1*sumR) >> c.fracWidth) +
           ((alpha(cyc + activeStages - 1)*expectzp1(cyc + activeStages - 1)) >> c.fracWidth)
       } else
-        sumL + ((forgetPowQ*(sumR + expectwD1(cyc + activeStages - 1))) >> c.fracWidth)
+          if ( c.isNORMA )
+            ((sumL*forget) >> c.fracWidth) + ((forgetPowQ1*(sumR + expectwD1(cyc + activeStages - 1))) >> c.fracWidth)
+          else
+            sumL + ((forgetPowQ*(sumR + expectwD1(cyc + activeStages - 1))) >> c.fracWidth)
     }
 
     poke(c.io.addToDict, Bool(addToDicts(cyc)).litValue())

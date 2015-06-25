@@ -123,7 +123,7 @@ class Manage(val bitWidth : Int, val fracWidth : Int, val stages : Int,
           new NORMAIOBundle(bitWidth, fracWidth)
         } else {
           val res  = new NORMArIOBundle(bitWidth, fracWidth)
-          val yReg = ShiftRegister(res.yRegin, stages, Bool(true))
+          val yReg = ShiftRegister(res.yRegin, ZERO, stages, Bool(true))
           res.yRegout := yReg
           res
         }
