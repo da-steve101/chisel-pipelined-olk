@@ -75,7 +75,7 @@ class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) e
   } }
 
   // Common Section
-  val ft = Mux(addToDictReg, (alphaReg*io.zp) + (io.forget*io.sum), io.sum + io.wD)
+  val ft = Mux(addToDictReg, (alphaReg*io.zp) + (io.forget*io.sum), (io.forget*io.sum) + (io.forget*io.wD))
   if (NORMAtype == 2)
     ftReg := ft - rhoReg
   else
@@ -145,7 +145,7 @@ class NORMAStageTests(c: NORMAStage) extends Tester(c) {
     poke(c.io.etapos, etapos)
     poke(c.io.etaneg, etaneg)
 
-    var ft = sum + wD
+    var ft = ((forget*sum) >> c.fracWidth) + ((forget*wD) >> c.fracWidth)
     if (addToDict) {
       val tmpA = (alpha * zp) >> c.fracWidth
       val tmpB = (forget * sum) >> c.fracWidth
