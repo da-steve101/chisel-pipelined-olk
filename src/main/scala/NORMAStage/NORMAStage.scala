@@ -4,6 +4,8 @@ import Chisel._
 
 
 class IOBundle(val bitWidth : Int, val fracWidth : Int) extends Bundle {
+  val reset   = Bool(INPUT)
+  val forceNA = Bool(INPUT)
   val sum    = Fixed(INPUT, bitWidth, fracWidth)
   val zp     = Fixed(INPUT, bitWidth, fracWidth)
   val wD     = Fixed(INPUT, bitWidth, fracWidth)
@@ -36,42 +38,32 @@ class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) e
   Predef.assert(NORMAtype == 1 || NORMAtype == 2 || NORMAtype == 3,
     "Norma type must be Classification = 1, Novelty = 2, Regression = 3")
 
+  val ZERO = Fixed(0, bitWidth, fracWidth)
   var yC   = Bool(true)
-  var yReg = Fixed(0, bitWidth, fracWidth)
+  var yReg = ZERO
+  val rhoReg = Reg(init=ZERO)
+  val bReg = Reg(init=ZERO)
+  val alphaReg = Reg(init=ZERO)
+  val ftReg = Reg(init=ZERO)
+  val addToDictReg = Reg(init=Bool(false))
   val io = {
     if (NORMAtype == 1) {
       val res = new IOBundle_C(bitWidth, fracWidth); yC = res.yC; res
-    } else if (NORMAtype == 2) {
+    } else if (NORMAtype == 3) {
       val res = new IOBundle_R(bitWidth, fracWidth); yReg = res.yReg; res
     } else {
       new IOBundle(bitWidth, fracWidth) }}
-  val zero = Fixed(0, bitWidth, fracWidth)
-  val rhoReg = Reg(init=zero)
-  val alphaReg = Reg(init=zero)
-  val ftReg = Reg(init=zero)
-  val addToDictReg = Reg(init=Bool(false))
-  io.alpha := alphaReg
-  io.ft := ftReg
-  io.addToDict := addToDictReg
-
-  val ft = Mux(addToDictReg, (alphaReg*io.zp) + (io.forget*io.sum), io.sum + io.wD)
-  if (NORMAtype == 2)
-    ftReg := ft - rhoReg
-  else
-    ftReg := ft
 
   val NORMA = { if (NORMAtype == 1) {
     val res = Module(new NORMAc(bitWidth, fracWidth))
-    val bReg = Reg(init=zero)
     res.io.bOld := bReg
-    bReg := res.io.bNew
+    bReg := Mux(io.forceNA || io.reset, Mux(io.reset, ZERO, bReg), res.io.bNew)
     res.io.y := yC
     res.io.etapos := io.etapos
     res.io.etaneg := io.etaneg
     alphaReg := Mux(res.io.sign, io.etapos, io.etaneg)
     res
-  }
-  else if (NORMAtype == 2) {
+  } else if (NORMAtype == 2) {
     val res = Module(new NORMAn(bitWidth, fracWidth))
     alphaReg := io.etapos
     res
@@ -83,12 +75,23 @@ class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) e
   } }
 
   // Common Section
+  val ft = Mux(addToDictReg, (alphaReg*io.zp) + (io.forget*io.sum), io.sum + io.wD)
+  if (NORMAtype == 2)
+    ftReg := ft - rhoReg
+  else
+    ftReg := ft
   NORMA.io.ft := ft
   NORMA.io.rhoOld := rhoReg
   NORMA.io.etanu  := io.etanu
   NORMA.io.etanu1 := io.etanu1
-  addToDictReg := NORMA.io.addToDict
-  rhoReg := NORMA.io.rhoNew
+  val newRho = Mux(io.forceNA | io.reset, Mux(io.reset, ZERO, rhoReg), NORMA.io.rhoNew)
+  rhoReg := newRho
+
+  io.alpha := alphaReg
+  io.ft := ftReg
+  addToDictReg := Mux(io.forceNA || io.reset, Bool(false), NORMA.io.addToDict)
+  io.addToDict := addToDictReg
+
 }
 
 class NORMAStageTests(c: NORMAStage) extends Tester(c) {
@@ -100,18 +103,22 @@ class NORMAStageTests(c: NORMAStage) extends Tester(c) {
   // internal Registers
   var rho = BigInt(0)
   var b = BigInt(0)
+  var rhoOld = BigInt(0)
+  var bOld = BigInt(0)
   var alpha = BigInt(0)
   var addToDict = false
 
-  for (i <- 0 until 10) {
+  for (i <- 0 until 30) {
     // Generate inputs
-    val sum    = BigInt(r.nextInt(1 << (c.bitWidth-2)))
-    val zp     = BigInt(r.nextInt(1 << (c.bitWidth-2)))
-    val wD     = BigInt(r.nextInt(1 << (c.bitWidth-2)))
+    val sum    = BigInt(r.nextInt(1 << (c.bitWidth/2)))
+    val zp     = BigInt(r.nextInt(1 << (c.bitWidth/2)))
+    val wD     = BigInt(r.nextInt(1 << (c.bitWidth/2)))
     val forget = BigInt(r.nextInt(1 << (c.fracWidth)))
 
     val yC     = (r.nextInt(2)*2) - 1
-    val yReg   = BigInt(r.nextInt(1 << (c.bitWidth-2)))
+    val forceNA = (r.nextInt(5) == 1)
+    val reset   = (r.nextInt(8) == 1)
+    val yReg   = BigInt(r.nextInt(1 << (c.bitWidth/2)))
     val eta    = BigInt(r.nextInt(1 << (c.bitWidth/2)))
     val nu     = BigInt(r.nextInt(1 << (c.bitWidth/2)))
     val etanu  = ((eta*nu) >> c.fracWidth)
@@ -123,11 +130,13 @@ class NORMAStageTests(c: NORMAStage) extends Tester(c) {
     poke(c.io.zp, zp)
     poke(c.io.wD, wD)
     poke(c.io.forget, forget)
+    poke(c.io.forceNA, Bool(forceNA).litValue())
+    poke(c.io.reset, Bool(reset).litValue())
     if (c.NORMAtype == 1) {
       val c_C = c.io.asInstanceOf[IOBundle_C]
       poke(c_C.yC, Bool(yC == 1).litValue())
     }
-    if (c.NORMAtype == 2) {
+    if (c.NORMAtype == 3) {
       val c_R = c.io.asInstanceOf[IOBundle_R]
       poke(c_R.yReg, yReg)
     }
@@ -171,11 +180,15 @@ class NORMAStageTests(c: NORMAStage) extends Tester(c) {
         rho = rho + etanu
     } else {
       val isPos = (yReg > ft)
-      var testCond = ft - yReg - rho
-      if (isPos) {
-        testCond = yReg - ft - rho
+      var testCond = {
+        if (isPos)
+          yReg - ft - rho
+        else
+          ft - yReg - rho
+      }
+      if (isPos)
         alpha = etapos
-      } else
+      else
         alpha = etaneg
       if (testCond > (1 << (c.bitWidth-1)))
         testCond = BigInt(-1)
@@ -185,10 +198,24 @@ class NORMAStageTests(c: NORMAStage) extends Tester(c) {
       } else
         rho = rho - etanu
     }
-    // Clock and read outputs
-    step(1)
+    // ft is different for novelty
     if (c.NORMAtype == 2)
       ft = ftNov
+    if (forceNA){
+      addToDict = false
+      rho = rhoOld
+      b = bOld
+    }
+    if (reset) {
+      rho = BigInt(0)
+      b = BigInt(0)
+      addToDict = false
+    }
+    rhoOld = rho
+    bOld = b
+
+    // Clock and read outputs
+    step(1)
     expect(c.io.addToDict, Bool(addToDict).litValue())
     expect(c.io.ft, ft)
     expect(c.io.alpha, alpha)
