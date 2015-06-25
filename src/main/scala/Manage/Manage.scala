@@ -157,6 +157,8 @@ class Manage(val bitWidth : Int, val fracWidth : Int, val stages : Int,
           val yenegReg = Reg(init=ZERO)
           yeposReg  := yReg - res.epsilon
           yenegReg  := - res.epsilon - yReg
+          res.yepos := yeposReg
+          res.yeneg := yenegReg
           res
         }
       }
@@ -169,7 +171,7 @@ class Manage(val bitWidth : Int, val fracWidth : Int, val stages : Int,
   }
 
   // Common
-  val forceReg = ShiftRegister(io.forceNAin, stages, Bool(true))
+  val forceReg = ShiftRegister(io.forceNAin, Bool(true), stages, Bool(true))
   val resetReg = Reg(init=Bool(true))
   val forgetReg = Reg(init=ZERO)
 
@@ -248,7 +250,7 @@ class ManageTests(c : Manage) extends Tester(c) {
 
     step(1)
 
-    if ( i > c.stages - 1 ) {
+    if ( i >= c.stages - 1 ) {
       expect(c.io.forceNAout, Bool(forceNAexpect(i)).litValue())
       expect(c.io.resetout, Bool(resetin).litValue())
       expect(c.io.forgetout, BigInt(forgetin))
