@@ -41,6 +41,9 @@ cleanall: clean
 
 emulator: $(outs)
 
+run:
+	set -e pipefail; $(SBT) $(SBT_FLAGS) "run $(PARAMSFILE) $(INPUTFILE) $(OUTPUTFILE) $(notdir $(basename $<)) --genHarness --compile --test --backend c --vcd $(CHISEL_FLAGS)" | tee $@
+
 dreamer: $(addsuffix .hex, $(executables))
 
 verilog: $(addsuffix .v, $(executables))
@@ -55,7 +58,7 @@ download: $(staging_targets)
 # We should be able to do this with .POSIX: or .SHELLFLAGS but they don't
 # appear to be support by Make 3.81
 
-%.out: $(srcdir)/%.scala $(source_files) $(top_file)
+%.out: $(srcdir)/%.scala $(source_files)
 	set -e pipefail; $(SBT) $(SBT_FLAGS) "run $(notdir $(basename $<)) --genHarness --compile --test --backend c --vcd $(CHISEL_FLAGS)" | tee $@
 
 %.hex: $(srcdir)/%.scala $(source_files)
@@ -67,4 +70,4 @@ download: $(staging_targets)
 smoke:
 	$(SBT) $(SBT_FLAGS) compile
 
-.PHONY: all check clean cleanall emulator verilog smoke download
+.PHONY: all run check clean cleanall emulator verilog smoke download

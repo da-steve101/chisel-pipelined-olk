@@ -7,6 +7,8 @@ import OLK.Manage._
 import OLK.NORMAStage._
 import OLK.Sum._
 import scala.collection.mutable.ArrayBuffer
+import com.github.tototoshi.csv._
+import scala.util.control.Breaks._
 
 /*
  This file implements the NORMA algorithm
@@ -22,7 +24,8 @@ class IOBundle(val bitWidth : Int, val fracWidth : Int, val features : Int) exte
   val nu      = Fixed(INPUT, bitWidth, fracWidth)
   val example = Vec.fill(features){Fixed(INPUT, bitWidth, fracWidth)}
 
-  val ft      = Fixed(OUTPUT, bitWidth, fracWidth)
+  val ft        = Fixed(OUTPUT, bitWidth, fracWidth)
+  val addToDict = Bool(OUTPUT)
 }
 
 class IOBundle_C(bitWidth : Int, fracWidth : Int, features : Int) extends IOBundle(bitWidth, fracWidth, features) {
@@ -34,7 +37,8 @@ class IOBundle_R(bitWidth : Int, fracWidth : Int, features : Int) extends IOBund
 }
 
 class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boolean],
-  val log2Table : Int, val dictionarySize : Int, val features : Int, val appType : Int) extends Module {
+  val log2Table : Int, val dictionarySize : Int, val features : Int, val appType : Int,
+  val paramFilename : String, val inputFilename : String, val outputFilename : String) extends Module {
 
   Predef.assert(fracWidth > log2Table, "Frac width too small or table too big")
 
@@ -76,14 +80,14 @@ class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Bo
     val normaModuleIOc  = normaModule.io.asInstanceOf[NORMAStage.IOBundle_C]
     manageModuleIOc.yCin := yC
     normaModuleIOc.yC    := manageModuleIOc.yCout
-    printf("yC: %d\n", manageModuleIOc.yCout)
+    //printf("yC: %d\n", manageModuleIOc.yCout)
   }
   if (appType == 3) {
     val manageModuleIOr = manageModuleIO.asInstanceOf[NORMArIOBundle]
     val normaModuleIOr  = normaModule.io.asInstanceOf[NORMAStage.IOBundle_R]
     manageModuleIOr.yRegin := yReg
     normaModuleIOr.yReg    := manageModuleIOr.yRegout
-    printf("yReg: %d\n", manageModuleIOr.yRegout)
+    //printf("yReg: %d\n", manageModuleIOr.yRegout)
   }
 
   // Dict Inputs
@@ -128,9 +132,11 @@ class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Bo
   normaModule.io.etanu1  := manageModuleIO.etanu1
 
   // Outputs
-  io.ft := normaModule.io.ft
+  io.ft        := normaModule.io.ft
+  io.addToDict := normaModule.io.addToDict
 
   // Debugging
+  /*
   printf("addToDict: %d\n", normaModule.io.addToDict)
   printf("sum: %d\n", sumModule.io.sum)
   printf("zp: %d\n", sumModule.io.zp)
@@ -153,7 +159,7 @@ class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Bo
       printf("%d, ", dictModule.io.currentDict(i)(j))
     printf("}\n")
   }
-
+   */
 }
 
 class NORMATests(c : NORMA) extends Tester(c) {
@@ -177,13 +183,41 @@ class NORMATests(c : NORMA) extends Tester(c) {
     xtmp += increment
   }
 
-  val r = scala.util.Random
+  def tryToBool(myBool : String, message : String) : Boolean = {
+    try {
+      myBool.trim.toBoolean
+    } catch {
+      case x:Exception => throw new Exception(message)
+    }
+  }
 
-  // generate parameters
-  val gamma = r.nextInt( 1 << c.fracWidth )
-  val forget = r.nextInt( 1 << c.fracWidth )
-  val eta = r.nextInt( 1 << c.fracWidth )
-  val nu = r.nextInt( 1 << c.fracWidth )
+  def tryToFixed(myDouble : String, message : String) : Int = {
+    try {
+      (myDouble.trim.toDouble * ( 1 << c.fracWidth )).toInt
+    } catch {
+      case x:Exception => throw new Exception(message)
+    }
+  }
+
+  def fromPeek(myNum : BigInt) : Int = {
+    if (myNum.toInt >= (1 << (c.bitWidth - 1)))
+      myNum.toInt - (1 << c.bitWidth)
+    else
+      myNum.toInt
+  }
+
+  //  val r = scala.util.Random
+
+  // read parameters
+  val reader = CSVReader.open(new java.io.File(c.paramFilename))
+  val lines = reader.all
+  reader.close
+  Predef.assert(lines.length >= 3, "Insufficient lines in parameter file " + c.paramFilename)
+  Predef.assert(lines(2).length <= 4, "Insufficient number of parameters in line 3 of parameter file " + c.paramFilename)
+  val gamma  = tryToFixed(lines(2)(0), "Could not cast gamma = "  + lines(2)(0) + " to a double or int")
+  val forget = tryToFixed(lines(2)(1), "Could not cast forget = " + lines(2)(1) + " to a double or int")
+  val eta    = tryToFixed(lines(2)(2), "Could not cast eta = "    + lines(2)(2) + " to a double or int")
+  val nu     = tryToFixed(lines(2)(3), "Could not cast nu = "     + lines(2)(3) + " to a double or int")
 
   def addExample(alpha : Int, example : ArrayBuffer[Int], forget : Int,
     weights : ArrayBuffer[Int], dictionary : ArrayBuffer[ArrayBuffer[Int]]) : Unit = {
@@ -233,8 +267,6 @@ class NORMATests(c : NORMA) extends Tester(c) {
   val weights = ArrayBuffer.fill(c.dictionarySize){0}
 
   val cycles = 5*c.pCycles
-  poke(c.io.reset, Bool(false).litValue())
-  poke(c.io.forceNA, Bool(false).litValue())
   poke(c.io.gamma, BigInt(gamma))
   poke(c.io.forget, BigInt(forget))
   poke(c.io.nu, BigInt(nu))
@@ -244,19 +276,48 @@ class NORMATests(c : NORMA) extends Tester(c) {
   val expectedAlpha = ArrayBuffer.fill(c.pCycles - 1){0}
   val expectedAdd = ArrayBuffer.fill(c.pCycles - 1){false}
   val expectedyC = ArrayBuffer.fill(c.pCycles - 2){false}
+  val expectedyReg = ArrayBuffer.fill(c.pCycles - 1){0}
   val expectedEx = ArrayBuffer.fill(c.pCycles - 1){ArrayBuffer.fill(c.features){0}}
-  val ONE = 1 << c.fracWidth
+  val ONE = (1 << c.fracWidth)
   var rho = 0
   var b = 0
   var alpha = 0
+  var cyc = 0
 
-  for ( cyc <- 0 until cycles ) {
+  var numFeatures = -1
+
+  // Open input and output files for reading and writing respectively
+  val inputReader   = CSVReader.open(new java.io.File(c.inputFilename))
+  val inputIterator = inputReader.iterator
+  val outputWriter  = CSVWriter.open(new java.io.File(c.outputFilename))
+  outputWriter.writeAll(lines.take(3)) // Write parameters to output so a record is attached
+  outputWriter.writeRow(List(c.inputFilename))
+
+  while ( inputIterator.hasNext ) {
+    val inputExLine = inputIterator.next
+    if (numFeatures == -1)
+      numFeatures = inputExLine.length - 3
+    if (numFeatures < 1 || inputExLine.length != numFeatures + 3 || numFeatures != c.features) {
+      println("Line " + cyc + " has incorrect number of values, aborting")
+      break
+    }
+    val reset   = tryToBool(inputExLine(0), "Could not read reset as Boolean on line " + cyc)
+    val forceNA = tryToBool(inputExLine(1), "Could not read forceNA as Boolean on line " + cyc)
+    val yReg    = tryToFixed(inputExLine(2), "Could not convert y to fixed on line " + cyc)
+    val yC      = (yReg == ONE) // use 1 and 0 or 1 and -1 for yC
+    val example = inputExLine.drop(3).map(x => {
+      tryToFixed(x, "Could not convert a feature to fixed on line " + cyc)
+    }).to[ArrayBuffer]
+    /*
     val example = ArrayBuffer.fill(c.features){r.nextInt(1 << (c.bitWidth/2))}
     val yC   = (r.nextInt(2) == 1)
     val yReg = r.nextInt(1 << c.fracWidth)
+     */
+
     val ft = computeFT(example, weights, dictionary)
     expectedFt += { if (c.appType == 2) ft - rho else ft }
     expectedyC += yC
+    expectedyReg += yReg
     expectedEx += example
 
     println("weights: " + weights)
@@ -304,6 +365,8 @@ class NORMATests(c : NORMA) extends Tester(c) {
     println("addToDict(" + cyc + "): " + expectedAdd(cyc))
 
     // Send values
+    poke(c.io.reset, Bool(reset).litValue())
+    poke(c.io.forceNA, Bool(forceNA).litValue())
     (c.io.example zip example).map(pair => { poke(pair._1, BigInt(pair._2)) } )
     if (c.appType == 1) {
       val NORMAcIO = c.io.asInstanceOf[IOBundle_C]
@@ -316,7 +379,19 @@ class NORMATests(c : NORMA) extends Tester(c) {
 
     step(1)
     // Expect output
-    expect(c.io.ft, BigInt(expectedFt(cyc)))
+    // expect(c.io.ft, BigInt(expectedFt(cyc)))
+    // put Output into file
+    if ( cyc > (c.pCycles - 1))
+      outputWriter.writeRow(List(peek(c.io.addToDict) == 1, (expectedyReg(cyc).toDouble / ONE), (fromPeek(peek(c.io.ft)).toDouble / ONE)))
+
+    cyc += 1
   }
+  // Push the last few through the pipeline
+  for ( i <- 0 until (c.pCycles - 1) ) {
+    step(1)
+    outputWriter.writeRow(List(peek(c.io.addToDict) == 1, (expectedyReg(cyc + i).toDouble / ONE), (fromPeek(peek(c.io.ft)).toDouble / ONE)))
+  }
+  inputReader.close()
+  outputWriter.close()
 }
 
