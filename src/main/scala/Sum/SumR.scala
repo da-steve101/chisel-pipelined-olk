@@ -44,13 +44,12 @@ trait stageCalc {
   def calculatedStages(dictionarySize : Int, activeStages : Int, stages : ArrayBuffer[Boolean]) : Int = {
     var layerCount = dictionarySize - activeStages - 2
     var sum = 1
-    Predef.assert(!stages.last, "Last stage must be false")
-    if (stages(0)) layerCount += 1;
     var i = 1
     while ( layerCount > 1 ) {
-      Predef.assert(i < stages.length, "Stages array is not long enough") 
-      if ( stages(i) )
-        layerCount += 1
+      if ( i < stages.length + 1) {
+        if ( stages(i - 1) )
+          layerCount += 1
+      }
       layerCount = (layerCount >> 1) + (layerCount & 1)
       sum += 1
       i += 1
@@ -59,11 +58,13 @@ trait stageCalc {
   } // Only adds a stage if moved up to higher power of 2
 }
 
-class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, val stages : ArrayBuffer[Boolean]) extends Module with stageCalc {
+class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int,
+  val stages : ArrayBuffer[Boolean]) extends Module with stageCalc {
     def log2Dict : Int = { log2Up(dictionarySize) }
     def activeStages : Int = { stages.count(_ == true) }
     Predef.assert(stages.length == calculatedStages(dictionarySize, activeStages, stages),
-      "Length of stages must be = " + (calculatedStages(dictionarySize, activeStages, stages)))
+      "Length of stages must be = " + (calculatedStages(dictionarySize, activeStages, stages)) +
+        " but got stages of length = " + stages.length)
 
     def group[A](list : List[A], size : Int) : List[List[A]] = list.foldLeft( (List[List[A]](), 0) ) { (r, c) => 
         r match {
@@ -137,13 +138,13 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int, va
             sumrTree += adderLevel
         }
     }
-    Predef.assert(sumrTree.dropRight(1).last.length == 2, "Second last stage in sum tree must have length of two")
     Predef.assert(sumrTree.last.length == 1, "Last stage in sum tree must have length of one")
+    Predef.assert(spareTree.last.length == 2, "Last stage in spare tree must length of two")
 
     // Output
     io.sumR := sumrTree.last.head
-    io.wD := spareTree.last.last
-    io.wD1 := spareTree.last.head
+    io.wD   := spareTree.last.last
+    io.wD1  := spareTree.last.head
 }
 
 class SumRTests(c : SumR) extends Tester(c) {
@@ -154,21 +155,19 @@ class SumRTests(c : SumR) extends Tester(c) {
     def toFixed(x : Int, fracWidth : Int) : BigInt = BigInt(scala.math.round(x*scala.math.pow(2, fracWidth)))
     val r = scala.util.Random
 
-  val activeStages = c.stages.count(_ == true)
+  val cycles = 3*(c.activeStages + 2)
 
-  val cycles = 3*(activeStages + 2)
-
-  val addToDicts = ArrayBuffer.fill(cycles + activeStages + 1){ r.nextInt(2) == 1}
-  val sumRAry = ArrayBuffer.fill(activeStages - 1){0}
-  val wDAry   = ArrayBuffer.fill(activeStages - 1){0}
-  val wD1Ary  = ArrayBuffer.fill(activeStages - 1){0}
+  val addToDicts = ArrayBuffer.fill(cycles + c.activeStages + 1){ r.nextInt(2) == 1}
+  val sumRAry = ArrayBuffer.fill(c.activeStages - 1){0}
+  val wDAry   = ArrayBuffer.fill(c.activeStages - 1){0}
+  val wD1Ary  = ArrayBuffer.fill(c.activeStages - 1){0}
   
   for (cyc <- 0 until cycles) {
     val inVI     = ArrayBuffer.fill(c.dictionarySize){r.nextInt(1 << c.fracWidth)}
     val inAlphaI = ArrayBuffer.fill(c.dictionarySize){r.nextInt(1 << c.fracWidth)}
 
     val wi = (inVI zip inAlphaI).map(pair => { (pair._1 * pair._2) >> c.fracWidth })
-    val totalAdded = addToDicts.drop(cyc).take(activeStages).count(_ == true)
+    val totalAdded = addToDicts.drop(cyc).take(c.activeStages).count(_ == true)
 
     sumRAry += wi.dropRight(totalAdded + 2).sum
     wDAry  += wi(wi.length - 1 - totalAdded)
@@ -181,7 +180,7 @@ class SumRTests(c : SumR) extends Tester(c) {
     }
 
     step(1)
-    if (cyc >= activeStages - 1) {
+    if (cyc >= c.activeStages - 1) {
       expect(c.io.sumR, BigInt(sumRAry(cyc)))
       expect(c.io.wD, BigInt(wDAry(cyc)))
       expect(c.io.wD1, BigInt(wD1Ary(cyc)))
