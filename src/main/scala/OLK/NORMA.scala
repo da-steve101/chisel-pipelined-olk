@@ -232,7 +232,7 @@ class NORMATests(c : NORMA) extends Tester(c) {
   val dictionary = ArrayBuffer.fill(c.dictionarySize){ArrayBuffer.fill(c.features){0}}
   val weights = ArrayBuffer.fill(c.dictionarySize){0}
 
-  val cycles = 3*c.pCycles
+  val cycles = 5*c.pCycles
   poke(c.io.reset, Bool(false).litValue())
   poke(c.io.forceNA, Bool(false).litValue())
   poke(c.io.gamma, BigInt(gamma))
@@ -255,7 +255,7 @@ class NORMATests(c : NORMA) extends Tester(c) {
     val yC   = (r.nextInt(2) == 1)
     val yReg = r.nextInt(1 << c.fracWidth)
     val ft = computeFT(example, weights, dictionary)
-    expectedFt += ft
+    expectedFt += { if (c.appType == 2) ft - rho else ft }
     expectedyC += yC
     expectedEx += example
 
@@ -275,10 +275,20 @@ class NORMATests(c : NORMA) extends Tester(c) {
         rho = rho - eta
     } else if (c.appType == 2) {
       // novelty
-
+      addToDict = (rho - ft) > 0
+      alpha = eta
+      rho = rho + ((eta*nu) >> c.fracWidth )
+      if (addToDict)
+        rho = rho - eta
     } else {
       // regression
-
+      val d = yReg - ft
+      val sign = { if (d > 0) 1 else -1 }
+      addToDict = (sign*d - rho) > 0
+      alpha = sign*eta
+      rho = rho - ((eta*nu) >> c.fracWidth )
+      if (addToDict)
+        rho = rho + eta
     }
     if (addToDict)
       addExample(alpha, example, forget, weights, dictionary)
