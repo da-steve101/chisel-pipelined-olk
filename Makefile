@@ -42,7 +42,7 @@ cleanall: clean
 emulator: $(outs)
 
 run:
-	set -e pipefail; $(SBT) $(SBT_FLAGS) "run $(PARAMSFILE) $(INPUTFILE) $(OUTPUTFILE) $(notdir $(basename $<)) --genHarness --compile --test --backend c --vcd $(CHISEL_FLAGS)" | tee $@
+	set -e pipefail; $(SBT) $(SBT_FLAGS) "run NORMARUN $(PARAMSFILE) $(INPUTFILE) $(OUTPUTFILE) --genHarness --compile --test --backend c --vcd $(CHISEL_FLAGS)" | tee $@
 
 dreamer: $(addsuffix .hex, $(executables))
 

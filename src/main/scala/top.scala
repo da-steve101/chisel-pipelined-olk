@@ -4,6 +4,7 @@ import OLK.Dict._
 import OLK.Sum._
 import OLK.NORMAStage._
 import OLK.Manage._
+import OLK.Kernel._
 import Chisel._
 import scala.collection.mutable.ArrayBuffer
 import com.github.tototoshi.csv._
@@ -32,86 +33,120 @@ object Top extends stageCalc {
       }
     }
 
-    def main(args: Array[String]): Unit = {
-
-      val paramFilename  = args(0)
-      val inputFilename  = args(1)
-      val outputFilename = args(2)
-      // Add checks in case the args have screwed up
-      checkFile(paramFilename, "csv")
-      checkFile(inputFilename, "csv")
-      Predef.assert(outputFilename.substring(outputFilename.lastIndexOf(".") + 1) == "csv",
-        "File " + outputFilename + " must have extension of .csv")
-      // Load csv files
-      // paramFile: bitWidth, fracWidth, log2Table, dictSize, features, appType
-      //            stages(0) == T/F, stages(1) == T/F ...
-      //            (gamma) (forget) (eta) (nu)
-      // inputfile depends on appType
-      // one example on each line for (classification/novelty/regression)
-      // input should be in floating point
-      // (reset) (forceNA) (yC/0/yReg) (feature(0)) (feature(1)) ...
-      // output file is
-      // (addToDict) (y) (ft)
-      // NB: first three lines of the output file are the parameters repeated
-      //     third line of output file is the name of the input file
-      val reader = CSVReader.open(new java.io.File(paramFilename))
-      val lines = reader.all
-      reader.close
-      Predef.assert(lines.length >= 3, "There must be at least three lines in the parameters file")
-      Predef.assert(lines(0).length == 6,
-        "Must have 6 parameters in first line\nbitWidth, fracWidth, log2Table, dictSize, features, appType")
-      val bitWidth  = tryToInt(lines(0)(0), "bitWidth of "  + lines(0)(0) + " is not an integer")
-      val fracWidth = tryToInt(lines(0)(1), "fracWidth of " + lines(0)(1) + " is not an integer")
-      val log2Table = tryToInt(lines(0)(2), "log2Table of " + lines(0)(2) + " is not an integer")
-      val dictSize  = tryToInt(lines(0)(3), "dictSize of "  + lines(0)(3) + " is not an integer")
-      val features  = tryToInt(lines(0)(4), "features of "  + lines(0)(4) + " is not an integer")
-      val appType   = tryToInt(lines(0)(5), "appType of "   + lines(0)(5) + " is not an integer")
-      Predef.assert(appType == 1 || appType == 2 || appType == 3,
-        "appType must be classification = 1, novelty detection = 2 or regression = 3")
-
-      val stages = lines(1).map(x => {
-        tryToBool(x, "Could not convert " + x + " to a boolean")
-      }).to[ArrayBuffer]
-
-      /*
+    def generateSumRStages(dictSize : Int) : ArrayBuffer[Boolean] = {
       val r = scala.util.Random
       var sStages = ArrayBuffer.fill(30){ r.nextInt(2) == 1 }
       sStages = (0 until 30).to[ArrayBuffer].map(x => { (x % 2) == 1 })
       var calcStage = sStages.length - 1
       while(sStages.length != calcStage) {
-          sStages = sStages.dropRight(1)
-          sStages(sStages.length - 1) = true
-          calcStage = calculatedStages(dictSize, sStages.count(_ == true), sStages)
-          if (calcStage > sStages.length)
-            sStages.appendAll(ArrayBuffer.fill(calcStage - sStages.length){ r.nextInt(2) == 1 })
-          println("calcStage: " + calcStage)
+        sStages = sStages.dropRight(1)
+        calcStage = calculatedStages(dictSize, sStages.count(_ == true), sStages)
+        if (calcStage > sStages.length)
+          sStages.appendAll(ArrayBuffer.fill(calcStage - sStages.length){ r.nextInt(2) == 1 })
       }
-      println(sStages)
-      chiselMainTest(args, () => Module(new SumR(18, 12, dictSize, sStages))) {
-        c => new SumRTests(c) }
+      sStages
+    }
 
-      sStages.append(true) // For final sum
+    def main(args: Array[String]): Unit = {
 
-      //      chiselMainTest(args, () => Module(new SumStage(18, 12, sStages, dictSize, true))) {
-      //        c => new SumStageTests(c) }
+      val chiselArgs = args.drop(1)
+      val runArgs = args.drop(4)
+      val r = scala.util.Random
+      var bitWidth = 18
+      var fracWidth = 12
+      var log2Table = 4
+      var dictSize = 16
+      var features = 8
+      var appType = r.nextInt(3) + 1
+      var isNORMA = true
+      args(0) match {
 
-      sStages.append(true) // For Update
-      // generate stages for kernel evaluation
-      val stages = ArrayBuffer.fill(log2Features + 7){ r.nextInt(2) == 1 }
-      stages.appendAll(sStages)
-      val isNorma = true
-      val appType = 3
-       */
+        case "NORMARUN" => {
+          val paramFilename  = args(1)
+          val inputFilename  = args(2)
+          val outputFilename = args(3)
+          // Add checks in case the args have screwed up
+          checkFile(paramFilename, "csv")
+          checkFile(inputFilename, "csv")
+          Predef.assert(outputFilename.substring(outputFilename.lastIndexOf(".") + 1) == "csv",
+            "File " + outputFilename + " must have extension of .csv")
+          // Load csv files
+          // paramFile: bitWidth, fracWidth, log2Table, dictSize, features, appType
+          //            stages(0) == T/F, stages(1) == T/F ...
+          //            (gamma) (forget) (eta) (nu)
+          // inputfile: one example on each line, input should be in floating point
+          // (reset) (forceNA) (yC/0/yReg) (feature(0)) (feature(1)) ...
+          // output file is:
+          // (addToDict) (y) (ft)
+          // NB: first three lines of the output file are the parameters repeated
+          //     fourth line of output file is the name of the input file
+          val reader = CSVReader.open(new java.io.File(paramFilename))
+          val lines = reader.all
+          reader.close
+          Predef.assert(lines.length >= 3, "There must be at least three lines in the parameters file")
+          Predef.assert(lines(0).length == 6,
+            "Must have 6 parameters in first line\nbitWidth, fracWidth, log2Table, dictSize, features, appType")
+          bitWidth  = tryToInt(lines(0)(0), "bitWidth of "  + lines(0)(0) + " is not an integer")
+          fracWidth = tryToInt(lines(0)(1), "fracWidth of " + lines(0)(1) + " is not an integer")
+          log2Table = tryToInt(lines(0)(2), "log2Table of " + lines(0)(2) + " is not an integer")
+          dictSize  = tryToInt(lines(0)(3), "dictSize of "  + lines(0)(3) + " is not an integer")
+          features  = tryToInt(lines(0)(4), "features of "  + lines(0)(4) + " is not an integer")
+          appType   = tryToInt(lines(0)(5), "appType of "   + lines(0)(5) + " is not an integer")
+          Predef.assert(appType == 1 || appType == 2 || appType == 3,
+            "appType must be classification = 1, novelty detection = 2 or regression = 3")
 
-      chiselMainTest(args.drop(3), () => Module(
-        new NORMA(bitWidth, fracWidth, stages, log2Table, dictSize, features, appType, paramFilename, inputFilename, outputFilename))
-      ) { c => new NORMATests(c) }
+          val stages = lines(1).map(x => {
+            tryToBool(x, "Could not convert " + x + " to a boolean")
+          }).to[ArrayBuffer]
 
-      //      chiselMainTest(args, () => Module(new Manage(18, 12, stages, isNORMA, appType))) {
-      //        c => new ManageTests(c) }
-      //      chiselMainTest(args, () => Module(new Dict(18, 12, 32, 8, 10, isNORMA))) {
-      //        c => new DictTests(c) }
+          chiselMainTest(runArgs, () => Module(
+            new NORMA(bitWidth, fracWidth, stages, log2Table, dictSize, features, appType, paramFilename, inputFilename, outputFilename))
+          ) { c => new NORMATests(c) }
 
+        }
+
+        case "SumR" => {
+          val stages = generateSumRStages(dictSize)
+          println("Stages: " + stages)
+          chiselMainTest(chiselArgs, () => Module(new SumR(bitWidth, fracWidth, dictSize, stages))) {
+            c => new SumRTests(c) }
+        }
+
+        case "SumStage" => {
+          val stages = generateSumRStages(dictSize)
+          stages.append(true)
+          println("Stages: " + stages)
+          chiselMainTest(chiselArgs, () => Module(new SumStage(bitWidth, fracWidth, stages, dictSize, isNORMA))) {
+            c => new SumStageTests(c) }
+        }
+
+        case "Gaussian" => {
+          val stages = ArrayBuffer.fill(log2Up(features) + 7){ r.nextInt(2) == 1 }
+          println("Stages: " + stages)
+          chiselMainTest(chiselArgs, () => Module(
+            new Gaussian(bitWidth, fracWidth, dictSize, features, stages.length + 4, stages, 1 << log2Table))
+          ) { c => new GaussianTests(c) }
+        }
+
+        case "Pow2" => {
+          val stages = ArrayBuffer.fill(5){ r.nextInt(2) == 1 }
+          println("Stages: " + stages)
+          chiselMainTest(chiselArgs, () => Module(new Pow2(bitWidth, fracWidth, stages, 1 << log2Table))) {
+            c => new Pow2Tests(c) }
+        }
+
+        case "Manage" => {
+          val stages = r.nextInt(15) + 3
+          chiselMainTest(chiselArgs, () => Module(new Manage(bitWidth, fracWidth, stages, isNORMA, appType))) {
+            c => new ManageTests(c) }
+        }
+
+        case "Dict" => {
+          val stages = r.nextInt(15) + 3
+          chiselMainTest(chiselArgs, () => Module(new Dict(bitWidth, fracWidth, dictSize, features, stages, isNORMA))) {
+            c => new DictTests(c) }
+        }
+      }
   }
 
 }
