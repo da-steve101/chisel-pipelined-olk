@@ -105,6 +105,7 @@ class Gaussian(val bitWidth : Int, val fracWidth : Int, val dictSize : Int, val 
     pair._2.io.gradTabAlt := pair._1.io.gradTabOut
     pair._2.io.offTabAlt  := pair._1.io.offTabOut
     pair._2.io.xint1Alt   := pair._1.io.xint1Out
+    pair._2.io.limitAlt   := pair._1.io.limitOut
     pair._2.io.gradAlt    := pair._1.io.gradOut
     pair._2.io.offAlt     := pair._1.io.offOut
     pair._2.io.xint2Alt   := pair._1.io.xint2Out
@@ -118,6 +119,7 @@ class Gaussian(val bitWidth : Int, val fracWidth : Int, val dictSize : Int, val 
   firstPipe.io.gradTabAlt := ZERO
   firstPipe.io.offTabAlt  := ZERO
   firstPipe.io.xint1Alt   := ZERO
+  firstPipe.io.limitAlt   := Bool(false)
   firstPipe.io.gradAlt    := ZERO
   firstPipe.io.offAlt     := ZERO
   firstPipe.io.xint2Alt   := ZERO
