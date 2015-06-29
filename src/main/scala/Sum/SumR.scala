@@ -63,10 +63,10 @@ trait stageCalc {
   def calculatedStages(dictionarySize : Int, activeStages : Int, stages : ArrayBuffer[Boolean]) : Int = {
     var layerCount = dictionarySize - activeStages - 2
     var sum = 1
-    var i = 1
+    var i = 0
     while ( layerCount > 1 ) {
-      if ( i < stages.length + 1) {
-        if ( stages(i - 1) )
+      if ( i < stages.length ) {
+        if ( stages(i) )
           layerCount += 1
       }
       layerCount = (layerCount >> 1) + (layerCount & 1)
