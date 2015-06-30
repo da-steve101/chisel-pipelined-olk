@@ -157,6 +157,14 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int,
             sumrTree += adderLevel
         }
     }
+
+    println("sumrTree is:")
+    for ( i <- 0 until sumrTree.length )
+        println(sumrTree(i).length)
+    println("spareTree is:")
+    for ( i <- 0 until spareTree.length )
+        println(spareTree(i).length)
+
     Predef.assert(sumrTree.last.length == 1, "Last stage in sum tree must have length of one")
     Predef.assert(spareTree.last.length == 2, "Last stage in spare tree must length of two")
 
