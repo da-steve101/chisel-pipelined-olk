@@ -35,6 +35,7 @@ class IOBundle(val bitWidth : Int, val fracWidth : Int) extends Bundle {
   val etanu  = Fixed(INPUT, bitWidth, fracWidth) // = eta*nu
   val etanu1 = Fixed(INPUT, bitWidth, fracWidth) // = -eta*(1-nu)
 
+  val forceNAout = Bool(OUTPUT)
   val addToDict = Bool(OUTPUT)
   val ft        = Fixed(OUTPUT, bitWidth, fracWidth)
   val alpha     = Fixed(OUTPUT, bitWidth, fracWidth)
@@ -106,6 +107,8 @@ class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) e
   val newRho = Mux(io.forceNA | io.reset, Mux(io.reset, ZERO, rhoReg), NORMA.io.rhoNew)
   rhoReg := newRho
 
+  val forceNAReg = Reg(init=Bool(true), next=io.forceNA)
+  io.forceNAout := forceNAReg
   io.alpha := alphaReg
   io.ft := ftReg
   addToDictReg := Mux(io.forceNA || io.reset, Bool(false), NORMA.io.addToDict)

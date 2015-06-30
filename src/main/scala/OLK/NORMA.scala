@@ -112,6 +112,7 @@ class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Bo
   // Dict Inputs
   dictModule.io.forget    := manageModuleIO.forgetout
   dictModule.io.reset     := manageModuleIO.resetout
+  dictModule.io.forceNA   := normaModule.io.forceNAout
   dictModule.io.example   := io.example
   dictModule.io.alpha     := normaModule.io.alpha
   dictModule.io.addToDict := normaModule.io.addToDict

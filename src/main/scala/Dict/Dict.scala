@@ -56,6 +56,7 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
   val features : Int, val pipelineStages : Int, val isNORMA : Boolean) extends Module {
   val io = new Bundle {
     val reset     = Bool(INPUT)
+    val forceNA   = Bool(INPUT)
     val alpha     = Fixed(INPUT, bitWidth, fracWidth)
     val forget    = Fixed(INPUT, bitWidth, fracWidth)
     val example   = Vec.fill(features){Fixed(INPUT, bitWidth, fracWidth)}
@@ -103,7 +104,7 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
     weights(0) := Mux(io.reset, ZERO, io.alpha)
   } .otherwise {
     if (isNORMA)
-      weights(0) := Mux(io.reset, ZERO, forgetWeights(0))
+      weights(0) := Mux(io.reset, ZERO, Mux(io.forceNA, weights(0), forgetWeights(0)))
     else
       weights(0) := Mux(io.reset, ZERO, weights(0))
   }
@@ -113,7 +114,7 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
       weights(d+1) := Mux(io.reset, ZERO, forgetWeights(d))
     } .otherwise {
       if (isNORMA)
-        weights(d+1) := Mux(io.reset, ZERO, forgetWeights(d+1))
+        weights(d+1) := Mux(io.reset, ZERO, Mux(io.forceNA, weights(d+1), forgetWeights(d+1)))
       else
         weights(d+1) := Mux(io.reset, ZERO, weights(d+1))
     }
