@@ -81,9 +81,9 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int,
   val stages : ArrayBuffer[Boolean]) extends Module with stageCalc {
     def log2Dict : Int = { log2Up(dictionarySize) }
     def activeStages : Int = { stages.count(_ == true) }
-    Predef.assert(stages.length == calculatedStages(dictionarySize, activeStages, stages),
-      "Length of stages must be = " + (calculatedStages(dictionarySize, activeStages, stages)) +
-        " but got stages of length = " + stages.length)
+    //Predef.assert(stages.length == calculatedStages(dictionarySize, activeStages, stages),
+    //  "Length of stages must be = " + (calculatedStages(dictionarySize, activeStages, stages)) +
+    //    " but got stages of length = " + stages.length)
 
     def group[A](list : List[A], size : Int) : List[List[A]] = list.foldLeft( (List[List[A]](), 0) ) { (r, c) => 
         r match {
