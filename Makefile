@@ -41,8 +41,11 @@ cleanall: clean
 
 emulator: $(outs)
 
-run:
+normaRun:
 	set -e pipefail; $(SBT) $(SBT_FLAGS) "run NORMARUN $(PARAMSFILE) $(INPUTFILE) $(OUTPUTFILE) --genHarness --compile --test --backend c --vcd $(CHISEL_FLAGS)" | tee $@
+
+normaVerilog:
+	set -e pipefail; $(SBT) $(SBT_FLAGS) "run NORMARUN $(PARAMSFILE) blank.csv blank.csv --genHarness --backend v $(CHISEL_FLAGS)"
 
 dreamer: $(addsuffix .hex, $(executables))
 
@@ -70,4 +73,4 @@ download: $(staging_targets)
 smoke:
 	$(SBT) $(SBT_FLAGS) compile
 
-.PHONY: all run check clean cleanall emulator verilog smoke download
+.PHONY: all nomraRun normaVerilog check clean cleanall emulator verilog smoke download

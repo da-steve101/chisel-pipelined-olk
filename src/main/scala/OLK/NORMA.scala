@@ -203,6 +203,11 @@ class NORMATests(c : NORMA) extends Tester(c) {
     xtmp += increment
   }
 
+  def checkFile(filename : String, ext : String) : Unit = {
+    Predef.assert(filename.substring(filename.lastIndexOf(".") + 1) == ext, "File " + filename + " must have extension of ." + ext)
+    Predef.assert(java.nio.file.Files.exists(java.nio.file.Paths.get(filename)), "File " + filename + " does not exist")
+  }
+
   def tryToBool(myBool : String, message : String) : Boolean = {
     try {
       myBool.trim.toBoolean
@@ -307,6 +312,9 @@ class NORMATests(c : NORMA) extends Tester(c) {
   var numFeatures = -1
 
   // Open input and output files for reading and writing respectively
+  checkFile(c.inputFilename, "csv")
+  Predef.assert(c.outputFilename.substring(c.outputFilename.lastIndexOf(".") + 1) == "csv",
+    "File " + c.outputFilename + " must have extension of .csv")
   val inputReader   = CSVReader.open(new java.io.File(c.inputFilename))
   val inputIterator = inputReader.iterator
   val outputWriter  = CSVWriter.open(new java.io.File(c.outputFilename))

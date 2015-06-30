@@ -86,9 +86,6 @@ object Top extends stageCalc {
           val outputFilename = args(3)
           // Add checks in case the args have screwed up
           checkFile(paramFilename, "csv")
-          checkFile(inputFilename, "csv")
-          Predef.assert(outputFilename.substring(outputFilename.lastIndexOf(".") + 1) == "csv",
-            "File " + outputFilename + " must have extension of .csv")
           // Load csv files
           // paramFile: bitWidth, fracWidth, log2Table, dictSize, features, appType
           //            stages(0) == T/F, stages(1) == T/F ...
