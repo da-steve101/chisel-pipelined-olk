@@ -58,7 +58,7 @@ class Gaussian(val bitWidth : Int, val fracWidth : Int, val dictSize : Int, val 
   val pCycles : Int, val stages : ArrayBuffer[Boolean], val tableSize : Int) extends Module {
   Predef.assert(features > 0, "There must be atleast one feature")
   def log2Features: Int = { log2Up(features) }
-  Predef.assert(features == 1 << log2Features, "Features must be a power of 2")
+  //Predef.assert(features == 1 << log2Features, "Features must be a power of 2")
   Predef.assert(stages.length == log2Features + 2 + 5,
     "The length of the stages ArrayBuffer into l2norm must be " + (log2Features + 2 + 5) + " for " + features + " features")
   def l2Cycles  : Int = { stages.take(log2Features + 2).count(_ == true) } // Count the number of stages in the L2 evaluation
@@ -156,10 +156,10 @@ class GaussianTests(c : Gaussian) extends Tester(c) {
 
   val cycles = 3*(c.kCycles + 1)
 
-  val pipeline   = ArrayBuffer.fill(c.pCycles){ArrayBuffer.fill(c.features){r.nextInt(1 << ((2*c.bitWidth)/3))}}
-  val dictionary = ArrayBuffer.fill(c.dictSize){ArrayBuffer.fill(c.features){r.nextInt(1 << ((2*c.bitWidth)/3))}}
+  val pipeline   = ArrayBuffer.fill(c.pCycles){ArrayBuffer.fill(c.features){r.nextInt(1 << ((2*c.bitWidth)/4))}}
+  val dictionary = ArrayBuffer.fill(c.dictSize){ArrayBuffer.fill(c.features){r.nextInt(1 << ((2*c.bitWidth)/4))}}
   val addToDict = ArrayBuffer.fill(cycles + c.kCycles){ r.nextInt(2) == 1 }
-  val gamma = r.nextInt(1 << (2*c.bitWidth)/3)
+  val gamma = r.nextInt(1 << (2*c.bitWidth)/4)
   for (j <- 0 until c.features) {
     for (i <- 0 until c.pCycles)
       poke(c.io.pipeline(i)(j), BigInt(pipeline(i)(j)))
@@ -197,7 +197,7 @@ class GaussianTests(c : Gaussian) extends Tester(c) {
   }
 
   for ( cyc <- 0 until cycles ) {
-    val example = ArrayBuffer.fill(c.features){r.nextInt(1 << (2*c.bitWidth)/3)}
+    val example = ArrayBuffer.fill(c.features){r.nextInt(1 << (2*c.bitWidth)/4)}
     // calculate the outputs for this example
     val subPipe = pipeline.map(x => {
       val subAry = new ArrayBuffer[Int]()
