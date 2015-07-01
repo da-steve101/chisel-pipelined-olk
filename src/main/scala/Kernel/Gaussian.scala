@@ -58,7 +58,7 @@ class Gaussian(val bitWidth : Int, val fracWidth : Int, val dictSize : Int, val 
   val pCycles : Int, val stages : ArrayBuffer[Boolean], val tableSize : Int) extends Module {
   Predef.assert(features > 0, "There must be atleast one feature")
   def log2Features: Int = { log2Up(features) }
-  Predef.assert(features == 1 << log2Features, "Features must be a power of 2")
+  //Predef.assert(features == 1 << log2Features, "Features must be a power of 2")
   Predef.assert(stages.length == log2Features + 2 + 5,
     "The length of the stages ArrayBuffer into l2norm must be " + (log2Features + 2 + 5) + " for " + features + " features")
   def l2Cycles  : Int = { stages.take(log2Features + 2).count(_ == true) } // Count the number of stages in the L2 evaluation

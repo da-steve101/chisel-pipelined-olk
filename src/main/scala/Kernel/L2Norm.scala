@@ -43,12 +43,12 @@ import scala.collection.mutable.ArrayBuffer
   */
 class L2Norm(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boolean], val features : Int) extends Module {
   Predef.assert(features > 0, "There must be atleast one feature")
-  def log2Features: Int = { (scala.math.log10(features)/scala.math.log10(2)).ceil.toInt }
-  Predef.assert(features == 1 << log2Features, "Features must be a power of 2")
+  def log2Features: Int = { log2Up(features) }
+  //Predef.assert(features == 1 << log2Features, "Features must be a power of 2")
   Predef.assert(stages.length == log2Features + 2,
     "The length of the stages ArrayBuffer into l2norm must be " + (log2Features + 2) + " for " + features + " features")
 
-  // A function to create list groupings. ie) L(1,2,3,4) => L(L(1,2), L(3,4))
+  // A function to create list groupings. ie) L(1,2,3,4, 5) => L(L(1,2), L(3,4), L(5))
   def group[A](list : List[A], size : Int) : List[List[A]] = list.foldLeft( (List[List[A]](), 0) ) { (r, c) =>
     r match {
       case (head :: tail, num) =>
@@ -57,6 +57,13 @@ class L2Norm(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[B
       case (Nil, num) => (List(List(c)),1)
     }
   }._1.foldLeft(List[List[A]]())( (r,c) => c.reverse :: r)
+
+
+  def buildLevel[A](list : List[A], op : (A, A) => A, op2 : A => A) : List[A] = group(list, 2).map(l =>  {
+    if (l.length == 1) op2(l(0)) else l.reduce[A](op(_,_))})
+
+  def pipeline(hasStage : Boolean)(wire : Fixed) = if (hasStage) Reg(init=Fixed(0, wire.getWidth(), wire.fractionalWidth), next=wire) else wire
+
 
   val io = new Bundle {
     val x1        = Vec.fill(features){Fixed(INPUT, bitWidth, fracWidth)}
@@ -81,9 +88,9 @@ class L2Norm(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[B
   val adderoutList = io.adderout.toList
 
   // compute x1(i) - x2(i)
-  val subStage = (io.x1 zip io.x2).map(pair => pair._1 - pair._2)
+  val subStage = (io.x1, io.x2).zipped.map(_+_)
   // connect to substage output
-  val suboutConn = (io.subout zip subStage).map(pair => (pair._1 := pair._2))
+  val suboutConn = (io.subout, subStage).zipped.map((p1, p2) => (p1 := p2))
 
   // Square the elements
   val sqrStage = {
@@ -109,7 +116,7 @@ class L2Norm(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[B
       MutableList(group(regStageSqr.toList,2))
     } else {
       MutableList(group(sqrStage.toList,2)) }}
-  val adderAdditionTree = MutableList(adderTree(0).map(pair => (pair(0) + pair(1))))
+  val adderAdditionTree = MutableList(adderTree(0).map(l => if(l.length == 1) l(0) else l(0) + l(1)))
   // Connection out for adder
   val adderoutConn = MutableList((adderoutList.take(1<<(log2Features-1)) zip adderAdditionTree(0)).map(pair => (pair._1 := pair._2)))
   // Optional Mux and Register stages
@@ -129,7 +136,7 @@ class L2Norm(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[B
   for (i <- 0 until (log2Features - 1)) {
     val noAdderVals = 1 << (log2Features - 2 - i)
     adderTree += ({ if (stages(i + 2)) { group(adderRegs.last.toList, 2) } else { group(adderAdditionTree.last.toList, 2) } }).toList
-    adderAdditionTree += adderTree.last.map(pair => (pair(0) + pair(1))).toList
+    adderAdditionTree += adderTree.last.map(l => if(l.length == 1) l(0) else l(0) + l(1))
     adderoutConn += (adderoutList.drop(adderPos).take(noAdderVals) zip adderAdditionTree.last).map(pair => (pair._1 := pair._2))
     if (stages(i + 3)) {
       adderMuxs += (adderaltList.drop(adderPos).take(noAdderVals) zip adderAdditionTree.last).map(pair => (Mux(io.addToDict, pair._1, pair._2)))

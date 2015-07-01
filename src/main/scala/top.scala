@@ -75,7 +75,7 @@ object Top extends stageCalc {
       var fracWidth = 12
       var log2Table = 4
       var dictSize = 16
-      var features = 8
+      var features = 7
       var appType = r.nextInt(3) + 1
       var isNORMA = true
       args(0) match {
