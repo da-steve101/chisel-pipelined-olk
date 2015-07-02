@@ -1,11 +1,11 @@
 #! /bin/bash
 
-if [ ! -d "caret"]; then
+if [ ! -d "caret" ]; then
   git clone https://github.com/da-steve101/caret.git
   #remove caret doc for faster build
   rm -f caret/pkg/caret/vignettes/caret.Rnw
 fi
-if [ ! -d "kernlab"]; then
+if [ ! -d "kernlab" ]; then
   git clone https://github.com/da-steve101/kernlab.git
   #remove kernlab doc for faster build
   rm -f kernlab/vignettes/kernlab.Rnw
