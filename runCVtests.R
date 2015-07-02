@@ -34,7 +34,7 @@ printTwoClassResults <- function(dataset, training, testing, normaTypes) {
                              buffersize = c(20, 40, 60, 100, 150, 200))
     normaCtrl <- trainControl(method = "repeatedcv", classProbs=TRUE,
                               summaryFunction=twoClassSummaryH)
-    normaGrid$kernel <- "rbfkernel"
+    normaGrid$kernel <- "rbfdot"
     for ( normaType in normaTypes) {
         normaGrid$normaType <- normaType
         for ( metric in metrics ) {
@@ -59,7 +59,7 @@ printRegressionResults <- function(dataset, training, testing) {
                              buffersize = c(20, 40, 60, 100, 150, 200))
     normaCtrl <- trainControl(method = "repeatedcv",
                               summaryFunction=regressionSummary)
-    normaGrid$kernel <- "rbfkernel"
+    normaGrid$kernel <- "rbfdot"
     for ( normaType in c("regression")) {
         normaGrid$normaType <- normaType
         for ( metric in metrics ) {
