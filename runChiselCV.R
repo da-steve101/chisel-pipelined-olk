@@ -1,8 +1,8 @@
 
 library(foreach)
 library(hmeasure)
-library(doMC)
-registerDoMC(cores = 8)
+#library(doMC)
+#registerDoMC(cores = 8)
 
 # number of cross validate
 noCV <- 2
