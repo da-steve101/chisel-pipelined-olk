@@ -205,7 +205,7 @@ class NORMATests(c : NORMA) extends Tester(c) {
 
   def checkFile(filename : String, ext : String) : Unit = {
     Predef.assert(filename.substring(filename.lastIndexOf(".") + 1) == ext, "File " + filename + " must have extension of ." + ext)
-    Predef.assert(java.nio.file.Files.exists(java.nio.file.Paths.get(filename)), "File " + filename + " does not exist")
+    //Predef.assert(java.nio.file.Files.exists(java.nio.file.Paths.get(filename)), "File " + filename + " does not exist")
   }
 
   def tryToBool(myBool : String, message : String) : Boolean = {

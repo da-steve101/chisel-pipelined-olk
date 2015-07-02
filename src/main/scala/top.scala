@@ -33,7 +33,7 @@ import com.github.tototoshi.csv._
 object Top extends stageCalc {
     def checkFile(filename : String, ext : String) : Unit = {
       Predef.assert(filename.substring(filename.lastIndexOf(".") + 1) == ext, "File " + filename + " must have extension of ." + ext)
-      Predef.assert(java.nio.file.Files.exists(java.nio.file.Paths.get(filename)), "File " + filename + " does not exist")
+      //Predef.assert(java.nio.file.Files.exists(java.nio.file.Paths.get(filename)), "File " + filename + " does not exist")
     }
 
     def tryToInt(number : String, message : String) : Int = {
