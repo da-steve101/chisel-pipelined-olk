@@ -409,7 +409,7 @@ class NORMATests(c : NORMA) extends Tester(c) {
     // Expect output
     // expect(c.io.ft, BigInt(expectedFt(cyc)))
     // put Output into file
-    if ( cyc > (c.pCycles - 1))
+    if ( cyc >= (c.pCycles - 1))
       outputWriter.writeRow(List(peek(c.io.addToDict) == 1, (expectedyReg(cyc).toDouble / ONE), (fromPeek(peek(c.io.ft)).toDouble / ONE)))
 
     cyc += 1
