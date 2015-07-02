@@ -11,6 +11,7 @@ if ( "--help" %in% args ) {
 
         --input=inputFile => file that was sent to chisel NORMA
         --output=outputFile => file that was created by chisel NORMA
+        --print => print the output
         --help => print this help
         \n\n")
     q(save="no")
@@ -59,17 +60,17 @@ inputData <- read.csv(argsL$input, header=FALSE)
 isTesting <- formatInput(inputData)
 outputData <- read.table(argsL$output, sep=",", skip=4)
 formatedOut <- formatOutput(outputData, isTesting)
-results <- HMeasure(formatedOut$Testing$Class, formatedOut$Testing$Pred)
-print(paste0("Results AUC : ", results$metrics$AUC))
-print(paste0("Results H : ", results$metrics$H))
+resultH <- suppressWarnings(HMeasure(formatedOut$Testing$Class, formatedOut$Testing$Pred))
 
 diff <- abs(formatedOut$Testing$Class - formatedOut$Testing$Pred)
 mae <- sum(diff)/length(diff)
 mse <- sum(diff^2)/length(diff)
 
-print(paste0("Results MAE : ", mae))
-print(paste0("Results MSE : ", mse))
+if ( ! is.null(argsL$print) ) {
+    print(paste0("Results AUC : ", resultH$metrics$AUC))
+    print(paste0("Results H : ", resultH$metrics$H))
+    print(paste0("Results MAE : ", mae))
+    print(paste0("Results MSE : ", mse))
+}
 
-
-
-
+resultsOut <- data.frame( AUC = resultH$metrics$AUC, H = resultH$metrics$H, MSE = mse, MAE = mae)
