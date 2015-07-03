@@ -29,10 +29,10 @@ printTwoClassResults <- function(dataset, training, testing, normaTypes) {
     metrics = c("AUC", "H")
     sigmas <- sigest(as.matrix(training[,-which(names(training) %in% "Class")]),
                      na.action=na.omit, scaled = TRUE)
-    normaGrid <- expand.grid(sigma = mean(as.vector(sigmas[-2]))*c(1,5,10,50,100),
-                             nu = c(1,4,8)/10, lambda = (1 - 2^(-4:-1)), eta = 10^(-3:-1),
-                             buffersize = c(20, 40, 60, 100, 150, 200))
-    normaCtrl <- trainControl(method = "repeatedcv", classProbs=TRUE,
+    normaGrid <- expand.grid(sigma = as.vector(sigmas),
+                             nu = c(1,4,7,9)/10, lambda = (1 - 2^(-4:-1)), eta = c(0.05, 0.03, 0.01, 0.008, 0.005),
+                             buffersize = c(40, 60, 100, 150, 200))
+    normaCtrl <- trainControl(method = "LOOCV", number = 10, classProbs=TRUE,
                               summaryFunction=twoClassSummaryH)
     normaGrid$kernel <- "rbfdot"
     for ( normaType in normaTypes) {
@@ -54,10 +54,10 @@ printRegressionResults <- function(dataset, training, testing) {
     metrics = c("MAE", "MSE")
     sigmas <- sigest(as.matrix(training[,-which(names(training) %in% "Class")]),
                      na.action=na.omit, scaled = TRUE)
-    normaGrid <- expand.grid(sigma = mean(as.vector(sigmas[-2]))*c(1,5,10,50,100),
-                             nu = c(1,4,8)/10, lambda = (1 - 2^(-4:-1)), eta = 10^(-3:-1),
-                             buffersize = c(20, 40, 60, 100, 150, 200))
-    normaCtrl <- trainControl(method = "repeatedcv",
+    normaGrid <- expand.grid(sigma = as.vector(sigmas),
+                             nu = c(1,4,7,9)/10, lambda = (1 - 2^(-4:-1)), eta = c(0.05, 0.03, 0.01, 0.008, 0.005),
+                             buffersize = c(40, 60, 100, 150, 200))
+    normaCtrl <- trainControl(method = "LOOCV", number = 10,
                               summaryFunction=regressionSummary)
     normaGrid$kernel <- "rbfdot"
     for ( normaType in c("regression")) {
@@ -90,8 +90,8 @@ printTwoClassResults(dataset, formatedData$Training, formatedData$Testing, "nove
 
 # REGRESSION
 
-artificialTwoClass <- read.csv("artificialTwoClass.csv", header=FALSE)
-formatedData <- formatDataset(artificialTwoClass, FALSE)
+artificialReg <- read.csv("artificialReg.csv", header=FALSE)
+formatedData <- formatDataset(artificialReg, FALSE)
 dataset = "artificial regression"
 printRegressionResults(dataset, formatedData$Training, formatedData$Testing)
 
