@@ -81,12 +81,12 @@ printRegressionResults <- function(dataset, training, testing) {
 artificialTwoClass <- read.csv("artificialTwoClass.csv", header=FALSE)
 formatedData <- formatDataset(artificialTwoClass, TRUE)
 dataset = "artificial"
-printTwoClassResults(dataset, formatedData$Training, formatedData$Testing, "novelty")
+printTwoClassResults(dataset, formatedData$Training, formatedData$Testing, c("classification", "novelty"))
 
 satellite <- read.csv("Satellite.csv", header=FALSE)
 formatedData <- formatDataset(satellite, TRUE)
 dataset = "satellite"
-printTwoClassResults(dataset, formatedData$Training, formatedData$Testing, "novelty")
+printTwoClassResults(dataset, formatedData$Training, formatedData$Testing, c("classification", "novelty"))
 
 # REGRESSION
 
