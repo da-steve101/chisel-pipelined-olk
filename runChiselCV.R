@@ -41,7 +41,7 @@ stages200 = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, F
 
 # generate params
 gammaParam = c(0.6071064, 1.214213)
-etaParam = c(0.1, 0.05, 0.01)
+etaParam = 1/(bufferSizeParams + 1)
 nuParam = c(0.1, 0.4, 0.7)
 
 # forget param
