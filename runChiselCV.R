@@ -9,20 +9,6 @@ noCV <- 10
 
 ##########################################################################
 
-# input data file
-inputFilename = "artificialTwoClass.csv"
-
-# params file prefix
-paramPrefix = paste0("tmp/params_", inputFilename, "_")
-
-# output file prefix
-outputPrefix = paste0("tmp/output_", inputFilename, "_")
-
-# log file prefix
-logPrefix = paste0("logs/log_", normaType, "_", inputFilename, "_")
-
-##########################################################################
-
 # parameters to test
 bitWidth = 18
 fracWidth = 12
@@ -40,7 +26,7 @@ stages150 = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, F
 stages200 = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE)
 
 # generate params
-gammaParam = c(0.6071064, 1.214213)
+gammaParam = c(0.05, 0.5, 1)
 etaParam = 1/(bufferSizeParams + 1)
 nuParam = c(0.1, 0.4, 0.7)
 
@@ -50,6 +36,20 @@ if ( normaType != 3 ) {
 } else {
     forgetParam = c(0.99, 0.95, 0.9)
 }
+
+##########################################################################
+
+# input data file
+inputFilename = "artificialTwoClass.csv"
+
+# params file prefix
+paramPrefix = paste0("tmp/params_", inputFilename, "_")
+
+# output file prefix
+outputPrefix = paste0("tmp/output_", inputFilename, "_")
+
+# log file prefix
+logPrefix = paste0("logs/log_", normaType, "_", inputFilename, "_")
 
 #######################################################################
 
