@@ -14,7 +14,7 @@ bitWidth = 18
 fracWidth = 12
 log2Table = 4
 features = 8
-normaType = 1
+normaType = 2
 
 bufferSizeParams = c(20, 60, 100, 150, 200)
 
@@ -42,6 +42,9 @@ if ( normaType != 3 ) {
 # input data file
 inputFilename = "artificialTwoClass.csv"
 
+dir.create("tmp", showWarnings=FALSE)
+dir.create("logs", showWarnings=FALSE)
+
 # params file prefix
 paramPrefix = paste0("tmp/params_", inputFilename, "_")
 
@@ -49,7 +52,7 @@ paramPrefix = paste0("tmp/params_", inputFilename, "_")
 outputPrefix = paste0("tmp/output_", inputFilename, "_")
 
 # log file prefix
-logPrefix = paste0("logs/log_", normaType, "_", inputFilename, "_")
+logFile = paste0("logs/log_", normaType, "_", inputFilename, ".log")
 
 #######################################################################
 
@@ -90,6 +93,16 @@ for ( i in 1:(noCV - 1) ) {
     trainingData$forceNA <- cv1
     sortOrder <- order(cv1)
     trainingDataSort <- trainingData[sortOrder,]
+    # if is novelty detection remove the other class
+    if ( normaType == 2 ) {
+        splitFactor <- factor(cv1[sortOrder])
+        levels(splitFactor) <- c("Training", "Testing")
+        splitTraining <- split(trainingDataSort, splitFactor)
+        removeIdxs <- factor(c(splitTraining$Training$Class != 1, rep(FALSE, length(splitTraining$Testing$Class))))
+        levels(removeIdxs) <- c("Included", "Removed")
+        allData <- split(trainingDataSort, removeIdxs)
+        trainingDataSort <- allData$Included
+    }
     write.table(trainingDataSort, file = paste0(cvSplitFilenames[i], ".csv"), row.names=FALSE, col.names=FALSE, sep=",")
     cvTestingVec <- c(cvTestingVec, cv1[sortOrder])
 }
@@ -119,8 +132,6 @@ foreach (bufIdx=1:length(bufferSizeParams)) %dopar% {
         stages <- stages200
     foreach (gamma=gammaParam) %dopar% {
         foreach (nu=nuParam) %dopar% {
-            # open log file
-            logFile = paste0(logPrefix, bufferSize, "_", nu, ".log")
             for (i in 1:length(etaParam)) {
                 forget = forgetParam[i]
                 eta = etaParam[i]
