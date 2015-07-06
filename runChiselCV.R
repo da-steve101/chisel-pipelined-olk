@@ -1,8 +1,5 @@
 
-library(foreach)
 library(hmeasure)
-#library(doMC)
-#registerDoMC(cores = 8)
 
 # number of cross validate
 noCV <- 10
@@ -118,7 +115,7 @@ cvTestingVec <- as.matrix(c(cvTestingVec, cv1[sortOrder]))
 dim(cvTestingVec) <- c(length(trainingData$Class), noCV)
 
 # for all params
-foreach (bufIdx=1:length(bufferSizeParams)) %dopar% {
+for (bufIdx in 1:length(bufferSizeParams)) {
     bufferSize=bufferSizeParams[bufIdx]
     if ( bufIdx == 1)
         stages <- stages20
@@ -130,8 +127,8 @@ foreach (bufIdx=1:length(bufferSizeParams)) %dopar% {
         stages <- stages150
     if ( bufIdx == 5)
         stages <- stages200
-    foreach (gamma=gammaParam) %dopar% {
-        foreach (nu=nuParam) %dopar% {
+    for (gamma in gammaParam)  {
+        for (nu in nuParam) {
             for (i in 1:length(etaParam)) {
                 forget = forgetParam[i]
                 eta = etaParam[i]
