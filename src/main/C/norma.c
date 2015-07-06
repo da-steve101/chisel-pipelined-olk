@@ -103,6 +103,7 @@ int main(int argv, char ** args) {
   long int totalTime = (stop->tv_sec*SEC_TO_NS + stop->tv_nsec) - (start->tv_sec*SEC_TO_NS + start->tv_nsec);
   printf("time = %lu ns\n", totalTime);
   printf("freq = %f Mhz\n", noEx*1000/((float)totalTime));
+  printf("latency = %f ns\n", ((float)totalTime)/noEx);
   
   // Free memory
   for ( i = 0; i < noEx; i++)
