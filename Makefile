@@ -1,6 +1,7 @@
 
 SBT ?= sbt
 SBT_FLAGS ?= -Dsbt.log.noformat=true
+CC = gcc
 # If a chiselVersion is defined, use that.
 # Otherwise, if we're making either "smoke" or "check" use the snapshot.
 # Otherwise, use the latest release.
@@ -18,6 +19,7 @@ CHISEL_FLAGS :=
 
 top_srcdir ?= .
 srcdir ?= src/main/scala/*
+csrrcdir ?= src/main/C
 top_file := src/main/scala/top.scala
 executables := $(filter-out top, $(notdir $(basename $(wildcard $(srcdir)/*.scala))))
 outs := $(addsuffix .out, $(executables))
@@ -47,6 +49,9 @@ normaRun:
 normaVerilog:
 	set -e pipefail; $(SBT) $(SBT_FLAGS) "run NORMARUN $(PARAMSFILE) blank.csv blank.csv --genHarness --backend v $(CHISEL_FLAGS)"
 
+normaC: norma.o
+	./norma.o
+
 dreamer: $(addsuffix .hex, $(executables))
 
 verilog: $(addsuffix .v, $(executables))
@@ -61,6 +66,9 @@ download: $(staging_targets)
 # We should be able to do this with .POSIX: or .SHELLFLAGS but they don't
 # appear to be support by Make 3.81
 
+%.o: $(csrrcdir)/%.c
+	$(CC) -Wall -O3 -o $(notdir $(basename $<)).o $< -lm
+
 %.out: $(srcdir)/%.scala $(source_files)
 	set -e pipefail; $(SBT) $(SBT_FLAGS) "run $(notdir $(basename $<)) --genHarness --compile --test --backend c --vcd $(CHISEL_FLAGS)" | tee $@
 
@@ -73,4 +81,4 @@ download: $(staging_targets)
 smoke:
 	$(SBT) $(SBT_FLAGS) compile
 
-.PHONY: all nomraRun normaVerilog check clean cleanall emulator verilog smoke download
+.PHONY: all nomraRun normaVerilog normaC check clean cleanall emulator verilog smoke download
