@@ -100,7 +100,7 @@ for ( i in 1:(noCV - 1) ) {
         allData <- split(trainingDataSort, removeIdxs)
         trainingDataSort <- allData$Included
     }
-    write.table(trainingDataSort, file = paste0(cvSplitFilenames[i], ".csv"), row.names=FALSE, col.names=FALSE, sep=",")
+    write.table(trainingDataSort, file = paste0(cvSplitFilenames[i], ".csv"), row.names=FALSE, col.names=FALSE, quote = FALSE, sep=",")
     cvTestingVec <- c(cvTestingVec, cv1[sortOrder])
 }
 
