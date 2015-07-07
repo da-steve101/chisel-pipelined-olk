@@ -18,7 +18,7 @@ formatDataset <- function(rawDataset, isTwoClass) {
         print(paste0("Levels changed from: (", levels(rawDataset$Class)[1], ",",
               levels(rawDataset$Class)[2], ") to (A,B)"))
         levels(rawDataset$Class) <- c("A", "B")
-        if ( sum( rawDataset$Class == "A") > sum( rawDataset$Class == "B"))
+        if ( sum( rawDataset$Class == "A") < sum( rawDataset$Class == "B"))
             rawDataset$Class <- relevel(rawDataset$Class, "B")   
     }
 
