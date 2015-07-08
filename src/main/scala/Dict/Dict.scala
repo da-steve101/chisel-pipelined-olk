@@ -55,7 +55,6 @@ import scala.collection.mutable.ArrayBuffer
 class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
   val features : Int, val pipelineStages : Int, val isNORMA : Boolean) extends Module {
   val io = new Bundle {
-    val reset     = Bool(INPUT)
     val forceNA   = Bool(INPUT)
     val alpha     = Fixed(INPUT, bitWidth, fracWidth)
     val forget    = Fixed(INPUT, bitWidth, fracWidth)
@@ -101,22 +100,22 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
   }
 
   when (io.addToDict) {
-    weights(0) := Mux(io.reset, ZERO, io.alpha)
+    weights(0) := io.alpha
   } .otherwise {
     if (isNORMA)
-      weights(0) := Mux(io.reset, ZERO, Mux(io.forceNA, weights(0), forgetWeights(0)))
+      weights(0) := Mux(io.forceNA, weights(0), forgetWeights(0))
     else
-      weights(0) := Mux(io.reset, ZERO, weights(0))
+      weights(0) := weights(0)
   }
 
   for (d <- 0 until (dictSize - 1)) {
     when (io.addToDict) {
-      weights(d+1) := Mux(io.reset, ZERO, forgetWeights(d))
+      weights(d+1) := forgetWeights(d)
     } .otherwise {
       if (isNORMA)
-        weights(d+1) := Mux(io.reset, ZERO, Mux(io.forceNA, weights(d+1), forgetWeights(d+1)))
+        weights(d+1) := Mux(io.forceNA, weights(d+1), forgetWeights(d+1))
       else
-        weights(d+1) := Mux(io.reset, ZERO, weights(d+1))
+        weights(d+1) := weights(d+1)
     }
   }
 }
@@ -127,7 +126,6 @@ class DictTests(c : Dict) extends Tester(c) {
   poke(c.io.alpha, zero)
   poke(c.io.forget, one)
   poke(c.io.addToDict, Bool(false).litValue())
-  poke(c.io.reset, Bool(false).litValue())
   for (p <- 0 until c.pipelineStages){
     for (f <- 0  until c.features)
       poke(c.io.example(f), one + BigInt(p))
@@ -165,8 +163,4 @@ class DictTests(c : Dict) extends Tester(c) {
       }
     }
   }
-  // Test reset
-  poke(c.io.reset, Bool(true).litValue())
-  step(1)
-  c.io.currentAlpha.toList.map(x => { expect(x, BigInt(0)) })
 }

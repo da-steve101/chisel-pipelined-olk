@@ -68,8 +68,6 @@ import scala.collection.mutable.ArrayBuffer
 class IOBundle(bitWidth: Int, fracWidth : Int) extends Bundle {
   val forceNAin  = Bool(INPUT)
   val forceNAout = Bool(OUTPUT)
-  val resetin    = Bool(INPUT)
-  val resetout   = Bool(OUTPUT)
 
   val forgetin  = Fixed(INPUT, bitWidth, fracWidth)
   val forgetout = Fixed(OUTPUT, bitWidth, fracWidth)
@@ -191,13 +189,9 @@ class Manage(val bitWidth : Int, val fracWidth : Int, val stages : Int,
 
   // Common
   val forceReg = ShiftRegister(io.forceNAin, Bool(true), stages, Bool(true))
-  val resetReg = Reg(init=Bool(true))
   val forgetReg = Reg(init=ZERO)
 
   io.forceNAout := forceReg
-
-  resetReg    := io.resetin
-  io.resetout := resetReg
 
   forgetReg    := io.forgetin
   io.forgetout := forgetReg
@@ -219,7 +213,6 @@ class ManageTests(c : Manage) extends Tester(c) {
   var etanuOld = 0
   for (i <- 0 until cycles) {
     val forceNAin  = (r.nextInt(2) == 1)
-    val resetin    = (r.nextInt(2) == 1)
 
     val yCin      = (r.nextInt(2) == 1)
     val yRegin    = r.nextInt(1 << (c.bitWidth/2))
@@ -238,7 +231,6 @@ class ManageTests(c : Manage) extends Tester(c) {
     yRegexpect += yRegin
 
     poke(c.io.forceNAin, Bool(forceNAin).litValue())
-    poke(c.io.resetin, Bool(resetin).litValue())
     poke(c.io.forgetin, BigInt(forgetin))
 
     if ( c.isNORMA ) {
@@ -271,7 +263,6 @@ class ManageTests(c : Manage) extends Tester(c) {
 
     if ( i >= c.stages - 1 ) {
       expect(c.io.forceNAout, Bool(forceNAexpect(i)).litValue())
-      expect(c.io.resetout, Bool(resetin).litValue())
       expect(c.io.forgetout, BigInt(forgetin))
 
       if ( c.isNORMA ) {

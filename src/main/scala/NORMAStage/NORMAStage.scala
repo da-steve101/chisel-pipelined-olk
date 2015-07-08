@@ -23,7 +23,6 @@ import Chisel._
 
 
 class IOBundle(val bitWidth : Int, val fracWidth : Int) extends Bundle {
-  val reset   = Bool(INPUT)
   val forceNA = Bool(INPUT)
   val sum    = Fixed(INPUT, bitWidth, fracWidth)
   val zp     = Fixed(INPUT, bitWidth, fracWidth)
@@ -77,7 +76,7 @@ class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) e
   val NORMA = { if (NORMAtype == 1) {
     val res = Module(new NORMAc(bitWidth, fracWidth))
     res.io.bOld := bReg
-    bReg := Mux(io.forceNA || io.reset, Mux(io.reset, ZERO, bReg), res.io.bNew)
+    bReg := Mux(io.forceNA, bReg, res.io.bNew)
     res.io.y := yC
     res.io.etapos := io.etapos
     res.io.etaneg := io.etaneg
@@ -104,14 +103,14 @@ class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) e
   NORMA.io.rhoOld := rhoReg
   NORMA.io.etanu  := io.etanu
   NORMA.io.etanu1 := io.etanu1
-  val newRho = Mux(io.forceNA | io.reset, Mux(io.reset, ZERO, rhoReg), NORMA.io.rhoNew)
+  val newRho = Mux(io.forceNA , rhoReg, NORMA.io.rhoNew)
   rhoReg := newRho
 
   val forceNAReg = Reg(init=Bool(true), next=io.forceNA)
   io.forceNAout := forceNAReg
   io.alpha := alphaReg
   io.ft := ftReg
-  addToDictReg := Mux(io.forceNA || io.reset, Bool(false), NORMA.io.addToDict)
+  addToDictReg := Mux(io.forceNA, Bool(false), NORMA.io.addToDict)
   io.addToDict := addToDictReg
 
 }
@@ -139,7 +138,6 @@ class NORMAStageTests(c: NORMAStage) extends Tester(c) {
 
     val yC     = (r.nextInt(2)*2) - 1
     val forceNA = (r.nextInt(5) == 1)
-    val reset   = (r.nextInt(8) == 1)
     val yReg   = BigInt(r.nextInt(1 << (c.bitWidth/2)))
     val eta    = BigInt(r.nextInt(1 << (c.bitWidth/2)))
     val nu     = BigInt(r.nextInt(1 << (c.bitWidth/2)))
@@ -153,7 +151,6 @@ class NORMAStageTests(c: NORMAStage) extends Tester(c) {
     poke(c.io.wD, wD)
     poke(c.io.forget, forget)
     poke(c.io.forceNA, Bool(forceNA).litValue())
-    poke(c.io.reset, Bool(reset).litValue())
     if (c.NORMAtype == 1) {
       val c_C = c.io.asInstanceOf[IOBundle_C]
       poke(c_C.yC, Bool(yC == 1).litValue())
@@ -227,11 +224,6 @@ class NORMAStageTests(c: NORMAStage) extends Tester(c) {
       addToDict = false
       rho = rhoOld
       b = bOld
-    }
-    if (reset) {
-      rho = BigInt(0)
-      b = BigInt(0)
-      addToDict = false
     }
     rhoOld = rho
     bOld = b

@@ -34,7 +34,6 @@ import scala.util.control.Breaks._
  */
 
 class IOBundle(val bitWidth : Int, val fracWidth : Int, val features : Int) extends Bundle {
-  val reset   = Bool(INPUT)
   val forceNA = Bool(INPUT)
 
   val gamma   = Fixed(INPUT, bitWidth, fracWidth)
@@ -111,7 +110,6 @@ class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Bo
 
   // Dict Inputs
   dictModule.io.forget    := manageModuleIO.forgetout
-  dictModule.io.reset     := manageModuleIO.resetout
   dictModule.io.forceNA   := normaModule.io.forceNAout
   dictModule.io.example   := io.example
   dictModule.io.alpha     := normaModule.io.alpha
@@ -121,7 +119,6 @@ class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Bo
   manageModuleIO.eta      := io.eta
   manageModuleIO.nu       := io.nu
   manageModuleIO.forgetin := io.forget
-  manageModuleIO.resetin  := io.reset
   manageModuleIO.forceNAin := io.forceNA
 
   // Kernel Inputs
@@ -140,7 +137,6 @@ class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Bo
   sumModule.io.addToDict := normaModule.io.addToDict
 
   // Norma Stage Inputs
-  normaModule.io.reset   := manageModuleIO.resetout
   normaModule.io.forceNA := manageModuleIO.forceNAout
   normaModule.io.sum     := sumModule.io.sum
   normaModule.io.zp      := sumModule.io.zp
@@ -329,7 +325,7 @@ class NORMATests(c : NORMA) extends Tester(c) {
       println("Line " + cyc + " has incorrect number of values, aborting")
       break
     }
-    val reset   = tryToBool(inputExLine(0), "Could not read reset as Boolean on line " + cyc)
+    // val reset   = tryToBool(inputExLine(0), "Could not read reset as Boolean on line " + cyc)
     val forceNA = tryToBool(inputExLine(1), "Could not read forceNA as Boolean on line " + cyc)
     val yReg    = tryToFixed(inputExLine(2), "Could not convert y to fixed on line " + cyc)
     val yC      = (yReg == ONE) // use 1 and 0 or 1 and -1 for yC
@@ -393,7 +389,6 @@ class NORMATests(c : NORMA) extends Tester(c) {
     println("addToDict(" + cyc + "): " + expectedAdd(cyc))
 
     // Send values
-    poke(c.io.reset, Bool(reset).litValue())
     poke(c.io.forceNA, Bool(forceNA).litValue())
     (c.io.example zip example).map(pair => { poke(pair._1, BigInt(pair._2)) } )
     if (c.appType == 1) {
