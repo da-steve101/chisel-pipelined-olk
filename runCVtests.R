@@ -30,8 +30,8 @@ printTwoClassResults <- function(dataset, training, testing, normaTypes) {
     sigmas <- sigest(as.matrix(training[,-which(names(training) %in% "Class")]),
                      na.action=na.omit, scaled = TRUE)
     normaGrid <- expand.grid(sigma = as.vector(sigmas),
-                             nu = c(1,4,7,9)/10, lambda = (1 - 2^(-4:-1)), eta = c(0.05, 0.03, 0.01, 0.008, 0.005),
-                             buffersize = c(40, 60, 100, 150, 200))
+                             nu = c(1,4,7,9)/10, lambda = 1, eta = c(0.05, 0.03, 0.01, 0.008, 0.005, 0.001),
+                             buffersize = c(100, 150, 200))
     normaCtrl <- trainControl(method = "LOOCV", number = 10, classProbs=TRUE,
                               summaryFunction=twoClassSummaryH)
     normaGrid$kernel <- "rbfdot"
@@ -55,8 +55,8 @@ printRegressionResults <- function(dataset, training, testing) {
     sigmas <- sigest(as.matrix(training[,-which(names(training) %in% "Class")]),
                      na.action=na.omit, scaled = TRUE)
     normaGrid <- expand.grid(sigma = as.vector(sigmas),
-                             nu = c(1,4,7,9)/10, lambda = (1 - 2^(-4:-1)), eta = c(0.05, 0.03, 0.01, 0.008, 0.005),
-                             buffersize = c(40, 60, 100, 150, 200))
+                             nu = c(1,4,7,9)/10, lambda = (1 - 2^(-4:-1)), eta = c(0.05, 0.01, 0.005, 0.001),
+                             buffersize = c(100, 150, 200))
     normaCtrl <- trainControl(method = "LOOCV", number = 10,
                               summaryFunction=regressionSummary)
     normaGrid$kernel <- "rbfdot"
