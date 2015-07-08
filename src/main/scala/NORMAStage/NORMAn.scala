@@ -36,7 +36,7 @@ class NORMAn(val bitWidth : Int, val fracWidth : Int) extends Module {
     val rhoNew    = Fixed(OUTPUT, bitWidth, fracWidth)
   }
   val testCond = io.rhoOld - io.ft
-  when (testCond > Fixed(0, bitWidth, fracWidth)) {
+  when (testCond >= Fixed(0, bitWidth, fracWidth)) {
     io.rhoNew := io.rhoOld + io.etanu1
     io.addToDict := Bool(true)
   } .otherwise {

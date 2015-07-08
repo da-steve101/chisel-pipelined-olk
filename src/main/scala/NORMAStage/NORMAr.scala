@@ -50,7 +50,7 @@ class NORMAr(val bitWidth : Int, val fracWidth : Int) extends Module {
   }
   val isPos = (io.y > io.ft)
   val testCond = Mux(isPos, io.y - io.ft - io.rhoOld, io.ft - io.y - io.rhoOld)
-  when (testCond > Fixed(0, bitWidth, fracWidth)) {
+  when (testCond >= Fixed(0, bitWidth, fracWidth)) {
     io.addToDict := Bool(true)
     io.rhoNew := io.rhoOld - io.etanu1
   } .otherwise {

@@ -73,7 +73,7 @@ class NORMAc(val bitWidth : Int, val fracWidth : Int) extends Module {
   val gt = io.ft + io.bOld
   val testCond = Mux(io.y, io.rhoOld - gt, io.rhoOld + gt)
 
-  when(testCond > Fixed(0, bitWidth, fracWidth)) {
+  when(testCond >= Fixed(0, bitWidth, fracWidth)) {
     io.bNew := bAdded
     io.addToDict := Bool(true)
     io.rhoNew := rhoAdded
