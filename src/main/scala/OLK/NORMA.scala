@@ -135,6 +135,7 @@ class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Bo
   sumModule.io.alpha  := normaModule.io.alpha
   sumModule.io.forget := manageModuleIO.forgetout
   sumModule.io.addToDict := normaModule.io.addToDict
+  sumModule.io.forceNA := normaModule.io.forceNAout
 
   // Norma Stage Inputs
   normaModule.io.forceNA := manageModuleIO.forceNAout
