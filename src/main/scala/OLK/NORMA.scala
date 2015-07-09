@@ -180,7 +180,7 @@ class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Bo
 
 class NORMATests(c : NORMA) extends Tester(c) {
   // Generate Table for linear interpolation
-  val gradients   = new ArrayBuffer[Int]()
+/*  val gradients   = new ArrayBuffer[Int]()
   val offsets     = new ArrayBuffer[Int]()
   // Fixed point increment
   val increment   = 1.0 / (1 << c.log2Table)
@@ -198,7 +198,7 @@ class NORMATests(c : NORMA) extends Tester(c) {
     offsets += (b * (1 << c.fracWidth)).toInt
     xtmp += increment
   }
-
+ */
   def checkFile(filename : String, ext : String) : Unit = {
     Predef.assert(filename.substring(filename.lastIndexOf(".") + 1) == ext, "File " + filename + " must have extension of ." + ext)
     //Predef.assert(java.nio.file.Files.exists(java.nio.file.Paths.get(filename)), "File " + filename + " does not exist")
@@ -212,19 +212,19 @@ class NORMATests(c : NORMA) extends Tester(c) {
     }
   }
 
-  def tryToFixed(myDouble : String, message : String) : Int = {
+  def tryToFixed(myDouble : String, message : String) : BigInt = {
     try {
-      (myDouble.trim.toDouble * ( 1 << c.fracWidth )).toInt
+      (myDouble.trim.toDouble * BigDecimal( BigInt(1) << c.fracWidth )).toBigInt
     } catch {
       case x:Exception => throw new Exception(message)
     }
   }
 
-  def fromPeek(myNum : BigInt) : Int = {
-    if (myNum.toInt >= (1 << (c.bitWidth - 1)))
-      myNum.toInt - (1 << c.bitWidth)
+  def fromPeek(myNum : BigInt) : BigInt = {
+    if (myNum >= (BigInt(1) << (c.bitWidth - 1)))
+      myNum - (BigInt(1) << c.bitWidth)
     else
-      myNum.toInt
+      myNum
   }
 
   //  val r = scala.util.Random
@@ -239,7 +239,7 @@ class NORMATests(c : NORMA) extends Tester(c) {
   val forget = tryToFixed(lines(2)(1), "Could not cast forget = " + lines(2)(1) + " to a double or int")
   val eta    = tryToFixed(lines(2)(2), "Could not cast eta = "    + lines(2)(2) + " to a double or int")
   val nu     = tryToFixed(lines(2)(3), "Could not cast nu = "     + lines(2)(3) + " to a double or int")
-
+/*
   def addExample(alpha : Int, example : ArrayBuffer[Int], forget : Int,
     weights : ArrayBuffer[Int], dictionary : ArrayBuffer[ArrayBuffer[Int]]) : Unit = {
     var newWeight = weights(0)
@@ -286,23 +286,23 @@ class NORMATests(c : NORMA) extends Tester(c) {
 
   val dictionary = ArrayBuffer.fill(c.dictionarySize){ArrayBuffer.fill(c.features){0}}
   val weights = ArrayBuffer.fill(c.dictionarySize){0}
-
+ */
   val cycles = 5*c.pCycles
-  poke(c.io.gamma, BigInt(gamma))
-  poke(c.io.forget, BigInt(forget))
-  poke(c.io.nu, BigInt(nu))
-  poke(c.io.eta, BigInt(eta))
-
+  poke(c.io.gamma, gamma)
+  poke(c.io.forget, forget)
+  poke(c.io.nu, nu)
+  poke(c.io.eta, eta)
+/*
   val expectedFt = ArrayBuffer.fill(c.pCycles - 1){0}
   val expectedAlpha = ArrayBuffer.fill(c.pCycles - 1){0}
   val expectedAdd = ArrayBuffer.fill(c.pCycles - 1){false}
   val expectedyC = ArrayBuffer.fill(c.pCycles - 2){false}
-  val expectedyReg = ArrayBuffer.fill(c.pCycles - 1){0}
   val expectedEx = ArrayBuffer.fill(c.pCycles - 1){ArrayBuffer.fill(c.features){0}}
-  val ONE = (1 << c.fracWidth)
   var rho = 0
   var b = 0
-  var alpha = 0
+  var alpha = 0 */
+  val expectedyReg = ArrayBuffer.fill(c.pCycles - 1){BigInt(0)}
+  val ONE = (BigInt(1) << c.fracWidth).toDouble
   var cyc = 0
 
   var numFeatures = -1
@@ -332,16 +332,16 @@ class NORMATests(c : NORMA) extends Tester(c) {
     val example = inputExLine.drop(3).map(x => {
       tryToFixed(x, "Could not convert a feature to fixed on line " + cyc)
     }).to[ArrayBuffer]
+
+    expectedyReg += yReg
     /*
-    val example = ArrayBuffer.fill(c.features){r.nextInt(1 << (c.bitWidth/2))}
-    val yC   = (r.nextInt(2) == 1)
-    val yReg = r.nextInt(1 << c.fracWidth)
-     */
+    //val example = ArrayBuffer.fill(c.features){r.nextInt(1 << (c.bitWidth/2))}
+    //val yC   = (r.nextInt(2) == 1)
+    //val yReg = r.nextInt(1 << c.fracWidth)
 
     val ft = computeFT(example, weights, dictionary)
     expectedFt += { if (c.appType == 2) ft - rho else ft }
     expectedyC += yC
-    expectedyReg += yReg
     expectedEx += example
 
     println("weights: " + weights)
@@ -387,17 +387,18 @@ class NORMATests(c : NORMA) extends Tester(c) {
     println("ft(" + cyc + "): " + expectedFt(cyc))
     println("alpha(" + cyc + "): " + expectedAlpha(cyc))
     println("addToDict(" + cyc + "): " + expectedAdd(cyc))
+     */
 
     // Send values
     poke(c.io.forceNA, Bool(forceNA).litValue())
-    (c.io.example zip example).map(pair => { poke(pair._1, BigInt(pair._2)) } )
+    (c.io.example zip example).map(pair => { poke(pair._1, pair._2) } )
     if (c.appType == 1) {
       val NORMAcIO = c.io.asInstanceOf[IOBundle_C]
       poke(NORMAcIO.yC, Bool(yC).litValue())
     }
     if (c.appType == 3) {
       val NORMArIO = c.io.asInstanceOf[IOBundle_R]
-      poke(NORMArIO.yReg, BigInt(yReg))
+      poke(NORMArIO.yReg, yReg)
     }
 
     step(1)

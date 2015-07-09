@@ -79,6 +79,7 @@ class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer
     val alpha  = Fixed(INPUT, bitWidth, fracWidth) // Weight for pipelined example
     val forget = Fixed(INPUT, bitWidth, fracWidth)
     val addToDict = Bool(INPUT)
+    val forceNA = Bool(INPUT)
 
     val sum = Fixed(OUTPUT, bitWidth, fracWidth)
     val zp  = Fixed(OUTPUT, bitWidth, fracWidth)
@@ -97,6 +98,7 @@ class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer
     val sumLModule = Module(new SumL(bitWidth, fracWidth, sumLStages, isNORMA))
     sumLModule.io.z := io.zi
     sumLModule.io.addToDict := io.addToDict
+    sumLModule.io.forceNA := io.forceNA
     sumLModule.io.forget := io.forget
     sumLModule.io.alpha := io.alpha
     sumL = sumLModule.io.sumL
@@ -114,23 +116,29 @@ class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer
   sumRModule.io.addToDict := io.addToDict
   val sumR = sumRModule.io.sumR
   val sumRwD1 = sumRModule.io.wD1
+  val sumRwD = sumRModule.io.wD
+
+  val sumLForceNA = Mux(io.forceNA, sumL, io.forget*sumL)
+  val sumRForceNA = Mux(io.forceNA, forgetPowQ*sumR, forgetPowQ1*sumR)
+  val sumRwD1ForceNA = Mux(io.forceNA, forgetPowQ*sumRwD1, forgetPowQ1*sumRwD1)
+  val sumRwDForceNA = Mux(io.forceNA, forgetPowQ*sumRwD, forgetPowQ1*sumRwD)
 
   val sumNotAdd =  {
     if ( isNORMA )
-      (forgetPowQ1*(sumR + sumRwD1)) + io.forget*sumL
+      (forgetPowQ1*(sumR + sumRwD1)) + sumLForceNA
     else
       (forgetPowQ*(sumR + sumRwD1)) + sumL
   }
-  val sumIsAdd  = (io.forget*sumL) + (io.alpha*sumLzp1) + (forgetPowQ1*sumR)
+  val sumIsAdd  = sumLForceNA + (io.alpha*sumLzp1) + sumRForceNA
 
   // Last stage registers
   val sumReg = Reg(init=ZERO)
   val wDReg  = Reg(init=ZERO)
   sumReg := Mux(io.addToDict, sumIsAdd, sumNotAdd)
   io.sum := sumReg
-  wDReg  := Mux(io.addToDict, forgetPowQ1*sumRwD1, {
+  wDReg  := Mux(io.addToDict, sumRwD1ForceNA, {
     if ( isNORMA )
-      forgetPowQ1*sumRModule.io.wD
+      sumRwDForceNA
     else
       forgetPowQ*sumRModule.io.wD
   })

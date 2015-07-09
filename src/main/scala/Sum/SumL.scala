@@ -59,6 +59,7 @@ class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int, val isNORM
     val alpha  = Fixed(INPUT, bitWidth, fracWidth)
     val forget = Fixed(INPUT, bitWidth, fracWidth)
     val addToDict = Bool(INPUT)
+    val forceNA = Bool(INPUT)
 
     val forgetPowQ  = Fixed(OUTPUT, bitWidth, fracWidth)
     val forgetPowQ1 = Fixed(OUTPUT, bitWidth, fracWidth)
@@ -82,7 +83,7 @@ class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int, val isNORM
     } else {
       val res = Vec.fill(stages - 1){Reg(init=ONE)}
       if ( isNORMA )
-        res(0) := io.forget
+        res(0) := Mux(io.forceNA, ONE, io.forget)
       else
         res(0) := Mux(io.addToDict, io.forget, ONE)
       res
@@ -97,10 +98,10 @@ class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int, val isNORM
   io.forgetPowQ1 := forgetPowQ1
 
   if (isNORMA) {
-    forgetPowQ  := io.forget*forgetPow.last
-    forgetPowQ1 := forgetPowSq*forgetPow.last
+    forgetPowQ  := Mux(io.forceNA, forgetPow.last, io.forget*forgetPow.last)
+    forgetPowQ1 := Mux(io.forceNA, io.forget*forgetPow.last, forgetPowSq*forgetPow.last)
     for (s <- 1 until (stages - 1))
-      forgetPow(s) := io.forget*forgetPow(s - 1)
+      forgetPow(s) := Mux(io.forceNA, forgetPow(s - 1), io.forget*forgetPow(s - 1))
    } else {
     forgetPowQ  := Mux(io.addToDict, io.forget*forgetPow.last, forgetPow.last)
     forgetPowQ1 := Mux(io.addToDict, forgetPowSq*forgetPow.last, io.forget*forgetPow.last)
@@ -122,9 +123,10 @@ class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int, val isNORM
   // Calculate the sum if the example is added each cycle
   sumLStages(0) := Mux(io.addToDict, io.alpha*io.z(stages + 1), ZERO)
   for (a <- 1 until stages) {
-    if ( isNORMA )
-      sumLStages(a) := Mux(io.addToDict, io.alpha*stageAry(a - 1)(stages + 1 - a) + io.forget*sumLStages(a - 1), io.forget*sumLStages(a - 1))
-    else
+    if ( isNORMA ) {
+      val forceNAMux = Mux(io.forceNA, sumLStages(a - 1), io.forget*sumLStages(a - 1))
+      sumLStages(a) := Mux(io.addToDict, io.alpha*stageAry(a - 1)(stages + 1 - a) + io.forget*sumLStages(a - 1), forceNAMux)
+    } else
       sumLStages(a) := Mux(io.addToDict, io.alpha*stageAry(a - 1)(stages + 1 - a) + io.forget*sumLStages(a - 1), sumLStages(a - 1))
   }
   io.sumL := sumLStages.last

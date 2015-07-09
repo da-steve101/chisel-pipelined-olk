@@ -150,7 +150,7 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   val yFracOut = mxVal + offValReg
   // Need to have a zero in MSB (which should be optimized out) so that not interpreted as negitive shift
   val xint2Out = Mux(limit, UInt(limitShift, width=(log2Up(fracWidth) + 1)),
-    x_int2(log2Up(fracWidth), 0) & UInt(limitShift, width=(log2Up(fracWidth) + 1)))
+    x_int2(scala.math.min(log2Up(fracWidth), bitWidth - fracWidth - 1), 0) & UInt(limitShift, width=(log2Up(fracWidth) + 1)))
   io.yFracOut := yFracOut
   io.xint2Out := xint2Out
   val yFrac         = optional[Fixed](stages(3), io.yFracAlt, yFracOut)
