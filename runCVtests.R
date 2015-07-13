@@ -8,7 +8,7 @@ library(doMC)
 registerDoMC(cores = 8)
 
 formatDataset <- function(rawDataset, isTwoClass) {
-    isTesting <- rawDataset$V2
+    isTesting <- factor(rawDataset$V2)
     levels(isTesting) <- c("Training", "Testing")
     rawDataset <- rawDataset[-(1:2)]
     names(rawDataset) <- c("Class", names(rawDataset[-1]))
