@@ -45,7 +45,7 @@ if ( !file.exists(argsL$output) ) {
 library(hmeasure)
 
 formatInput <- function(rawDataset) {
-    isTesting <- rawDataset$V2
+    isTesting <- factor(rawDataset$V2)
     levels(isTesting) <- c("Training", "Testing")
     return(isTesting)
 }
@@ -60,7 +60,13 @@ inputData <- read.csv(argsL$input, header=FALSE)
 isTesting <- formatInput(inputData)
 outputData <- read.table(argsL$output, sep=",", skip=4)
 formatedOut <- formatOutput(outputData, isTesting)
-resultH <- suppressWarnings(HMeasure(formatedOut$Testing$Class, formatedOut$Testing$Pred))
+resultH <- NULL
+if ( length(unique(formatedOut$Testing$Class)) <= 2 ) {
+    resultH <- suppressWarnings(HMeasure(formatedOut$Testing$Class, formatedOut$Testing$Pred))
+} else {
+    resultH <- data.frame( metrics = 0 )
+    resultH$metrics <- data.frame(AUC = 0, H = 0)
+}
 
 diff <- abs(formatedOut$Testing$Class - formatedOut$Testing$Pred)
 mae <- sum(diff)/length(diff)
