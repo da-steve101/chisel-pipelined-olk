@@ -134,7 +134,12 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   // calculate m*x
   val gradOut = gradVal*xFracVal
   val offOut  = offVal
-  val limitOut = (x_int1 >= UInt(limitShift, width=(bitWidth - fracWidth)))
+  val limitOut = {
+    if ( bitWidth - fracWidth <= log2Up(fracWidth) )
+      Bool(false)
+    else
+      (x_int1 >= UInt(limitShift, width=(bitWidth - fracWidth)))
+  }
   io.gradOut  := gradOut
   io.offOut   := offOut
   io.xint1Out := x_int1
