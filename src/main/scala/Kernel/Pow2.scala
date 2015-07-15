@@ -31,7 +31,7 @@ import scala.collection.mutable.ArrayBuffer
 class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boolean],
   val lookupTableSize : Int) extends Module {
   Predef.assert(lookupTableSize > 0, "Table size must be greater than zero")
-  def log2Table: Int = { log2Up(lookupTableSize) }
+  def log2Table: Int = { if (lookupTableSize == 1) 0 else log2Up(lookupTableSize) }
   def limitShift: BigInt = { BigInt((1 << log2Up(fracWidth)) - 1) }
   Predef.assert((1 << log2Table) == lookupTableSize, "Table size must be a power of 2")
   Predef.assert(log2Table < fracWidth, "Table size must be smaller than the number of fractional bits")
@@ -114,7 +114,12 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   // Split x into parts
   val x_int  = xVal(bitWidth - 1, fracWidth)
   val x_frac = xVal & FRAC
-  val x_tabl = xVal(fracWidth - 1, fracWidth - log2Table)
+  val x_tabl = {
+    if ( log2Table == 0 )
+      UInt(0, width=1)
+    else
+      xVal(fracWidth - 1, fracWidth - log2Table)
+  }
 
   // get values from lookup table
   val gradTabOut = gradTable(x_tabl)
