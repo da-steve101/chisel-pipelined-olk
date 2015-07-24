@@ -162,6 +162,12 @@ object Top extends stageCalc {
           chiselMainTest(chiselArgs, () => Module(new Dict(bitWidth, fracWidth, dictSize, features, stages, isNORMA))) {
             c => new DictTests(c) }
         }
+
+        case "UserModule" => {
+          chiselMainTest(chiselArgs, () => Module(new UserModule)) {
+            c => new UserModuleTests(c) }
+        }
+
       }
   }
 
