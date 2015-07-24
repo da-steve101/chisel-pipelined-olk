@@ -32,7 +32,7 @@ printTwoClassResults <- function(dataset, training, testing, normaTypes) {
     normaGrid <- expand.grid(sigma = as.vector(sigmas),
                              nu = c(1,4,7,9)/10, lambda = 1, eta = c(0.05, 0.03, 0.01, 0.008, 0.005, 0.001),
                              buffersize = c(100, 150, 200))
-    normaCtrl <- trainControl(method = "LOOCV", number = 10, classProbs=TRUE,
+    normaCtrl <- trainControl(method = "cv", number = 10, classProbs=TRUE,
                               summaryFunction=twoClassSummaryH)
     normaGrid$kernel <- "rbfdot"
     for ( normaType in normaTypes) {
@@ -57,7 +57,7 @@ printRegressionResults <- function(dataset, training, testing) {
     normaGrid <- expand.grid(sigma = as.vector(sigmas),
                              nu = c(1,4,7,9)/10, lambda = (1 - 2^(-4:-1)), eta = c(0.05, 0.01, 0.005, 0.001),
                              buffersize = c(100, 150, 200))
-    normaCtrl <- trainControl(method = "LOOCV", number = 10,
+    normaCtrl <- trainControl(method = "cv", number = 10,
                               summaryFunction=regressionSummary)
     normaGrid$kernel <- "rbfdot"
     for ( normaType in c("regression")) {

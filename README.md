@@ -39,7 +39,7 @@ The third row has four parameters for NORMA when running with the emulator. They
 
 | Parameter | Description |
 | --------- | ----------- |
-| `gamma`   | The parameter for the gaussian kernel = e^(-gamma*(|x1 - x2|^2)) with gamma > 0 |
+| `gamma`   | The parameter for the gaussian kernel = e^(-gamma*(x1 - x2)^2) with gamma > 0 |
 | `forget`  | The parameter multiplied into the weights to forget the dictionary over time with 0 < forget < 1 |
 | `eta`     | The correspond parameter in norma and initial weight when added with 0 < eta < 1. For classification and novelty detection forget = (1 - eta) |
 | `nu`      | Affects the bias to determine how often examples are added to the dictionary with 0 < nu < 1 |
@@ -50,8 +50,21 @@ The input dataset has is also a CSV. Each row has the following
 
 | Parameter | Description |
 | --------- | ----------- |
-| reset     | Reset the implementation, should be held TRUE for the next p cycles where p is the number of stages in the pipeline |
+| reset     | Not currently used, keep as False |
 | forceNA   | Force the example to NOT be added to the dictionary and not affect the state of NORMA. Used to test a point without learning from it |
 | Label/Class | The desired outcome to learn. For classification the labels should be 1 and -1, Novelty detection ignores this field, Regression expects this field to be a float which will be converted to a fixed |
 | Features | An arbitrary number of features depending on the parameter above. They should be in float format and will then be converted to fixed |
 
+# Running NORMA on the datasets
+
+To run the NORMA algorithm on a dataset to obtain the performance on that dataset run:
+`make normaRun PARAMSFILE=params_artificialTwoClass_Class.csv INPUTFILE=artificialTwoClass.csv OUTPUTFILE=test_out.csv`
+
+This will compile and run norma with the parameters specified in the file `params_artificialTwoClass_Class.csv`
+The same command can be used with other datasets.
+
+To obtain the AUC and H performance of NORMA on the dataset, the R script `summarizeResults.R` is used.
+After running the above command, run:
+`Rscript summarizeResults.R --input=artificialTwoClass.csv --output=test_out.csv --print`
+
+The parameters in the files were obtained by cross validating a floating point implementation.
