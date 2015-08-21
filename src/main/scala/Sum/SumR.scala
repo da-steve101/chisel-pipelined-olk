@@ -128,7 +128,7 @@ class SumR(val bitWidth : Int, val fracWidth : Int, val dictionarySize : Int,
     val alphaiList = io.alphai.toList
 
     // wi = vi.*alphai
-    val wiList = (viList, alphaiList).zipped.map(_*_)
+    val wiList = (viList, alphaiList).zipped.map(_*%_)
     val wiListPipe = wiList.map( x => { pipeline(stages(0))(x) } )
 
     val n = stages.length
