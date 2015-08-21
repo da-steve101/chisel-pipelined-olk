@@ -97,9 +97,9 @@ class L2Norm(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[B
       val muxStageSub = (io.subalt zip subStage).map(pair => (Mux(io.addToDict, pair._1, pair._2)))
       // Optional Register here
       val regStageSub = muxStageSub.map(pair => ({ val reg = Reg(init=Fixed(0.0, bitWidth, fracWidth)); reg := pair; reg }))
-      regStageSub.map(x => (x*x))
+      regStageSub.map(x => (x*%x))
     } else {
-      subStage.map(x => (x*x)) } }
+      subStage.map(x => (x*%x)) } }
   // connect sqrstage output
   val sqroutConn = (io.sqrout zip sqrStage).map(pair => (pair._1 := pair._2))
 

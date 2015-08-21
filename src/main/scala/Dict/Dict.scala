@@ -70,7 +70,7 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
   val pipelinedEx = Vec.fill(pipelineStages){Vec.fill(features){Reg(init=Fixed(0.0, bitWidth, fracWidth))}}
   val dict        = Vec.fill(dictSize){Vec.fill(features){Reg(init=Fixed(0.0, bitWidth, fracWidth))}}
   val weights     = Vec.fill(dictSize){Reg(init=Fixed(0.0, bitWidth, fracWidth))}
-  val forgetWeights = weights.toList.map(x => { io.forget*x })
+  val forgetWeights = weights.toList.map(x => { io.forget*%x })
   val ZERO = Fixed(0, bitWidth, fracWidth)
 
   for (f <- 0 until features) {

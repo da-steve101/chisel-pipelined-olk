@@ -118,18 +118,18 @@ class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer
   val sumRwD1 = sumRModule.io.wD1
   val sumRwD = sumRModule.io.wD
 
-  val sumLForceNA = Mux(io.forceNA, sumL, io.forget*sumL)
-  val sumRForceNA = Mux(io.forceNA, forgetPowQ*sumR, forgetPowQ1*sumR)
-  val sumRwD1ForceNA = Mux(io.forceNA, forgetPowQ*sumRwD1, forgetPowQ1*sumRwD1)
-  val sumRwDForceNA = Mux(io.forceNA, forgetPowQ*sumRwD, forgetPowQ1*sumRwD)
+  val sumLForceNA = Mux(io.forceNA, sumL, io.forget*%sumL)
+  val sumRForceNA = Mux(io.forceNA, forgetPowQ*%sumR, forgetPowQ1*%sumR)
+  val sumRwD1ForceNA = Mux(io.forceNA, forgetPowQ*%sumRwD1, forgetPowQ1*%sumRwD1)
+  val sumRwDForceNA = Mux(io.forceNA, forgetPowQ*%sumRwD, forgetPowQ1*%sumRwD)
 
   val sumNotAdd =  {
     if ( isNORMA )
-      (forgetPowQ1*(sumR + sumRwD1)) + sumLForceNA
+      (forgetPowQ1*%(sumR + sumRwD1)) + sumLForceNA
     else
-      (forgetPowQ*(sumR + sumRwD1)) + sumL
+      (forgetPowQ*%(sumR + sumRwD1)) + sumL
   }
-  val sumIsAdd  = sumLForceNA + (io.alpha*sumLzp1) + sumRForceNA
+  val sumIsAdd  = sumLForceNA + (io.alpha*%sumLzp1) + sumRForceNA
 
   // Last stage registers
   val sumReg = Reg(init=ZERO)
@@ -140,7 +140,7 @@ class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer
     if ( isNORMA )
       sumRwDForceNA
     else
-      forgetPowQ*sumRModule.io.wD
+      forgetPowQ*%sumRModule.io.wD
   })
   io.wD  := wDReg
 }

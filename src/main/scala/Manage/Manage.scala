@@ -150,7 +150,7 @@ class Manage(val bitWidth : Int, val fracWidth : Int, val stages : Int,
       normaIO.etapos := etaposReg
       etanegReg      := -normaIO.eta
       normaIO.etaneg := etanegReg
-      etanuReg       := normaIO.eta*normaIO.nu
+      etanuReg       := normaIO.eta*%normaIO.nu
       normaIO.etanu  := etanuReg
       etanu1Reg      := etanuReg - normaIO.eta // - eta*(1 - nu)
       normaIO.etanu1 := etanu1Reg

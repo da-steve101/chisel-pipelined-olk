@@ -105,7 +105,7 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   val offsetTable = Vec(offsets.map((i: Int) => Fixed(BigInt(i), bitWidth, fracWidth)))
 
   // multiply gamma*x
-  val xValOut = io.gamma*io.x
+  val xValOut = io.gamma*%io.x
   io.xValOut := xValOut
   val xVal = optional[Fixed](stages(0), io.xValAlt, xValOut)
 
@@ -137,7 +137,7 @@ class Pow2(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boo
   // END OF STAGE 1
 
   // calculate m*x
-  val gradOut = gradVal*xFracVal
+  val gradOut = gradVal*%xFracVal
   val offOut  = offVal
   val limitOut = {
     if ( bitWidth - fracWidth <= log2Up(fracWidth) )
@@ -243,7 +243,7 @@ class Pow2Tests(c : Pow2) extends Tester(c) {
     // generate random inputs
     val x          = BigInt(r.nextInt(1 << c.fracWidth))
     val gamma      = BigInt(r.nextInt(1 << c.fracWidth))
-    val addToDict  = (r.nextInt(2) == 1)
+    val addToDict  = false //(r.nextInt(2) == 1)
     val xValAlt    = BigInt(r.nextInt(1 << c.fracWidth))
     val xintAlt    = BigInt(r.nextInt(1 << ((c.bitWidth - c.fracWidth)/2)))
     val xFracAlt   = BigInt(r.nextInt(1 << ((c.bitWidth - c.fracWidth)/2)))

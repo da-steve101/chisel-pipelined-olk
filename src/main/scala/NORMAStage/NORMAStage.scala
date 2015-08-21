@@ -93,11 +93,11 @@ class NORMAStage(val bitWidth : Int, val fracWidth : Int, val NORMAtype : Int) e
     res
   } }
 
-  val sumForceNA = Mux(io.forceNA, io.sum, io.forget*io.sum)
-  val wDForceNA  = Mux(io.forceNA, io.wD, io.forget*io.wD)
+  val sumForceNA = Mux(io.forceNA, io.sum, io.forget*%io.sum)
+  val wDForceNA  = Mux(io.forceNA, io.wD, io.forget*%io.wD)
 
   // Common Section
-  val ft = Mux(addToDictReg, (alphaReg*io.zp) + sumForceNA, sumForceNA + wDForceNA)
+  val ft = Mux(addToDictReg, (alphaReg*%io.zp) + sumForceNA, sumForceNA + wDForceNA)
   if (NORMAtype == 2)
     ftReg := ft - rhoReg
   else
