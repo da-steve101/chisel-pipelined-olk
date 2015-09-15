@@ -68,3 +68,8 @@ After running the above command, run:
 `Rscript summarizeResults.R --input=artificialTwoClass.csv --output=test_out.csv --print`
 
 The parameters in the files were obtained by cross validating a floating point implementation.
+
+# Generating the Verilog
+
+To generate the verilog run:
+`make normaVerilog PARAMSFILE=params_artificialTwoClass_Class.csv`
