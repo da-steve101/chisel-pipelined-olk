@@ -163,10 +163,10 @@ object Top extends stageCalc {
             c => new DictTests(c) }
         }
 
-        case "UserModule" => {
-          chiselMainTest(chiselArgs, () => Module(new UserModule)) {
-            c => new UserModuleTests(c) }
-        }
+//        case "UserModule" => {
+//          chiselMainTest(chiselArgs, () => Module(new UserModule)) {
+//            c => new UserModuleTests(c) }
+//        }
 
       }
   }
