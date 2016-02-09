@@ -125,7 +125,7 @@ class SumStage(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer
 
   val sumNotAdd =  {
     if ( isNORMA )
-      (forgetPowQ1*%(sumR + sumRwD1)) + sumLForceNA
+      sumRForceNA + sumRwD1ForceNA + sumLForceNA
     else
       (forgetPowQ*%(sumR + sumRwD1)) + sumL
   }

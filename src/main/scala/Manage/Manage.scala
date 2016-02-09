@@ -188,7 +188,7 @@ class Manage(val bitWidth : Int, val fracWidth : Int, val stages : Int,
   }
 
   // Common
-  val forceReg = ShiftRegister(io.forceNAin, Bool(true), stages, Bool(true))
+  val forceReg = ShiftRegister(io.forceNAin, Bool(true), stages)
   val forgetReg = Reg(init=ZERO)
 
   io.forceNAout := forceReg
