@@ -36,6 +36,7 @@ all: emulator verilog # dreamer
 
 clean:
 	-rm -f *.h *.hex *.flo *.cpp *.o *.out *.v *.vcd $(executables)
+	sbt clean
 	-rm -rf project/target/ target/
 
 cleanall: clean
@@ -55,6 +56,9 @@ normaC: norma.o
 dreamer: $(addsuffix .hex, $(executables))
 
 verilog: $(addsuffix .v, $(executables))
+
+check test:
+	$(SBT) $(SBT_FLAGS) test
 
 %.stage:
 	cd $(@D); git pull

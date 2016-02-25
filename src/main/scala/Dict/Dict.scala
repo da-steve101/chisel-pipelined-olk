@@ -67,20 +67,15 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
   }
 
   // Registers
-  val pipelinedEx = Vec.fill(pipelineStages){Vec.fill(features){Reg(init=Fixed(0.0, bitWidth, fracWidth))}}
-  val dict        = Vec.fill(dictSize){Vec.fill(features){Reg(init=Fixed(0.0, bitWidth, fracWidth))}}
-  val weights     = Vec.fill(dictSize){Reg(init=Fixed(0.0, bitWidth, fracWidth))}
+  val pipelinedEx = RegInit( Vec.fill( pipelineStages ){Vec.fill( features ){ Fixed(0.0, bitWidth, fracWidth)}})
+  val dict        = RegInit( Vec.fill( dictSize ){ Vec.fill( features ){ Fixed(0.0, bitWidth, fracWidth) }})
+  val weights     = RegInit( Vec.fill( dictSize ){ Fixed(0.0, bitWidth, fracWidth) } )
   val forgetWeights = weights.toList.map(x => { io.forget*%x })
   val ZERO = Fixed(0, bitWidth, fracWidth)
 
-  for (f <- 0 until features) {
-    for (p <- 0 until pipelineStages)
-      io.currentPipeline(p)(f) := pipelinedEx(p)(f)
-    for (d <- 0 until dictSize)
-      io.currentDict(d)(f) := dict(d)(f)
-  }
-  for (d <- 0 until dictSize)
-    io.currentAlpha(d) := weights(d)
+  io.currentDict := dict
+  io.currentPipeline := pipelinedEx
+  io.currentAlpha := weights
 
   for (f <- 0 until features) {
     // Pipeline
@@ -116,51 +111,6 @@ class Dict(val bitWidth : Int, val fracWidth : Int, val dictSize : Int,
         weights(d+1) := Mux(io.forceNA, weights(d+1), forgetWeights(d+1))
       else
         weights(d+1) := weights(d+1)
-    }
-  }
-}
-
-class DictTests(c : Dict) extends Tester(c) {
-  val one = BigInt(1 << c.fracWidth)
-  val zero = BigInt(0)
-  poke(c.io.alpha, zero)
-  poke(c.io.forget, one)
-  poke(c.io.addToDict, Bool(false).litValue())
-  for (p <- 0 until c.pipelineStages){
-    for (f <- 0  until c.features)
-      poke(c.io.example(f), one + BigInt(p))
-    step(1)
-    for (p2 <- 0 until c.pipelineStages) {
-      var x = zero
-      if (p2 <= p)
-        x = one  + BigInt(p - p2)
-      for (f <- 0 until c.features)
-        expect(c.io.currentPipeline(p2)(f), x)
-    }
-  }
-  // Pipeline now full, test dict
-  poke(c.io.alpha, one)      // 1
-  poke(c.io.forget, one/2) // 0.5
-  poke(c.io.addToDict, Bool(true).litValue())
-  for (p <- 0 until c.pipelineStages) {
-    var pVal = p
-    if (p > (c.pipelineStages - 4)) {
-      // in the last case test if the example is not added
-      poke(c.io.addToDict, Bool(false).litValue())
-      pVal = (c.pipelineStages - 4)
-    }
-    step(1)
-    for (d <- 0 until (pVal+1)) {
-      // Check weights
-      var alphai = (one >> d)
-      if (p > pVal && c.isNORMA)
-        alphai = (alphai >> (p - pVal))
-      expect(c.io.currentAlpha(d), alphai)
-      // Check dictionary
-      val x = (one + BigInt(pVal - d))
-      for (f <- 0 until c.features) {
-        expect(c.io.currentDict(d)(f), x)
-      }
     }
   }
 }
