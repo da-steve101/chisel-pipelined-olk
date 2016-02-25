@@ -8,6 +8,16 @@ import OLK.NORMAStage._
 
 class NormaStageSuite extends TestSuite {
 
+  def normaCStep( rhoOld : BigInt, y : BigInt, ft : BigInt, bOld : BigInt, eta : BigInt,
+    etanu1 : BigInt, etanu : BigInt, bitWidth : Int ) : (Boolean, BigInt, BigInt) = {
+    val testCond = rhoOld - y*(ft + bOld)
+    // dodgy hack incase overflowed into sign bit
+    if (testCond >= BigInt(0) && !( testCond > (1 << (bitWidth-1)) ) )
+      ( true, bOld + y*eta, rhoOld + etanu1 )
+    else
+      ( false, bOld, rhoOld + etanu)
+  }
+
   @Test def normaCTest {
 
     class NORMAcTests(c: NORMAc) extends Tester(c) {
@@ -28,18 +38,9 @@ class NormaStageSuite extends TestSuite {
         val etanu  = ((eta*nu) >> c.fracWidth)
         val etanu1 = -((eta*(toFixed(1, c.fracWidth) - nu)) >> c.fracWidth)
 
-        var testCond = rhoOld - y*(ft + bOld)
-        var bNew = bOld
-        var rhoNew = rhoOld + etanu
-        var addToDict = Bool(false)
-        // dodgy hack incase overflowed into sign bit
-        if (testCond > (1 << (c.bitWidth-1)))
-          testCond = BigInt(-1)
-        if (testCond > BigInt(0)) {
-          bNew = bOld + y*eta
-          rhoNew = rhoOld + etanu1
-          addToDict = Bool(true)
-        }
+        val normaStep = normaCStep( rhoOld, y, ft, bOld, eta,
+          etanu1, etanu, c.bitWidth )
+
         poke(c.io.ft, ft)
         poke(c.io.rhoOld, rhoOld)
         poke(c.io.bOld, bOld)
@@ -48,21 +49,30 @@ class NormaStageSuite extends TestSuite {
         poke(c.io.etaneg, etaneg)
         poke(c.io.etanu, etanu)
         poke(c.io.etanu1, etanu1)
-        expect(c.io.addToDict, addToDict.litValue())
-        expect(c.io.bNew, bNew)
-        expect(c.io.rhoNew, rhoNew)
+        expect(c.io.addToDict, normaStep._1)
+        expect(c.io.bNew, normaStep._2)
+        expect(c.io.rhoNew, normaStep._3)
       }
     }
 
     val myRand = new Random
     val fracWidth = myRand.nextInt(24) + 1
-    val bitWidth = myRand.nextInt(24) + fracWidth + 4
+    val bitWidth = scala.math.min(myRand.nextInt(24) + fracWidth + 4, 31)
     println("val fracWidth = " + fracWidth)
     println("val bitWidth = " + bitWidth)
     chiselMainTest(Array("--genHarness", "--compile", "--test", "--backend", "c"), () => {
       Module( new NORMAc( bitWidth, fracWidth ) )
     } ) { c => new NORMAcTests( c ) }
 
+  }
+
+  def normaNStep( rhoOld : BigInt, ft : BigInt, etanu1 : BigInt, etanu : BigInt, bitWidth : Int ) : (Boolean, BigInt) = {
+    val testCond = rhoOld - ft
+    // dodgy hack incase overflowed into sign bit
+    if (testCond >= 0 && !( testCond > (1 << (bitWidth-1)) ) )
+      ( true, rhoOld + etanu1 )
+    else
+      ( false, rhoOld + etanu )
   }
 
   @Test def normaN {
@@ -80,33 +90,36 @@ class NormaStageSuite extends TestSuite {
         val etanu  = ((eta*nu) >> c.fracWidth)
         val etanu1 = -((eta*(toFixed(1, c.fracWidth) - nu)) >> c.fracWidth)
 
-        var testCond = rhoOld - ft
-        // dodgy hack incase overflowed into sign bit
-        if (testCond > (1 << (c.bitWidth-1)))
-          testCond = BigInt(-1)
-        var rho = rhoOld + etanu
-        var addToDict = false
-        if (testCond > 0) {
-          addToDict = true
-          rho = rhoOld + etanu1
-        }
+        val normaStep = normaNStep( rhoOld, ft, etanu1, etanu, c.bitWidth )
+
         poke(c.io.ft, ft)
         poke(c.io.rhoOld, rhoOld)
         poke(c.io.etanu, etanu)
         poke(c.io.etanu1, etanu1)
-        expect(c.io.addToDict, Bool(addToDict).litValue())
-        expect(c.io.rhoNew, rho)
+        expect(c.io.addToDict, normaStep._1 )
+        expect(c.io.rhoNew, normaStep._2 )
       }
     }
     val myRand = new Random
     val fracWidth = myRand.nextInt(24) + 1
-    val bitWidth = myRand.nextInt(24) + fracWidth + 4
+    val bitWidth = scala.math.min(myRand.nextInt(24) + fracWidth + 4, 31)
     println("val fracWidth = " + fracWidth)
     println("val bitWidth = " + bitWidth)
     chiselMainTest(Array("--genHarness", "--compile", "--test", "--backend", "c"), () => {
       Module( new NORMAn( bitWidth, fracWidth ) )
     } ) { c => new NORMAnTests( c ) }
 
+  }
+
+  def normaRStep( rhoOld : BigInt, y : BigInt, ft : BigInt, etanu1 : BigInt,
+    etanu : BigInt, bitWidth : Int ) : (Boolean, BigInt, Boolean) = {
+    val isPos = (y > ft)
+    val testCond = { if ( isPos ) (y - ft - rhoOld) else (ft - y - rhoOld) }
+    // dodgy hack incase overflowed into sign bit
+    if (testCond >= 0 && !( testCond > (1 << (bitWidth-1)) ) )
+      ( true, rhoOld - etanu1, isPos )
+    else
+      ( false, rhoOld - etanu, isPos )
   }
 
   @Test def normaR {
@@ -126,33 +139,22 @@ class NormaStageSuite extends TestSuite {
         val etanu  = ((eta*nu) >> c.fracWidth)
         val etanu1 = -((eta*(toFixed(1, c.fracWidth) - nu)) >> c.fracWidth)
 
-        val isPos = (y > ft)
-        var testCond = ft - y - rhoOld
-        if (isPos)
-          testCond = y - ft - rhoOld
-        // dodgy hack incase overflowed into sign bit
-        if (testCond > (1 << (c.bitWidth-1)))
-          testCond = BigInt(-1)
-        var rho = rhoOld - etanu
-        var addToDict = false
-        if (testCond > 0) {
-          addToDict = true
-          rho = rhoOld - etanu1
-        }
+        val normaStep = normaRStep( rhoOld, y, ft, etanu1, etanu, c.bitWidth )
+
         poke(c.io.ft, ft)
         poke(c.io.y, y)
         poke(c.io.rhoOld, rhoOld)
         poke(c.io.etanu, etanu)
         poke(c.io.etanu1, etanu1)
-        expect(c.io.addToDict, Bool(addToDict).litValue())
-        expect(c.io.rhoNew, rho)
-        expect(c.io.sign, Bool(isPos).litValue())
+        expect(c.io.addToDict, normaStep._1)
+        expect(c.io.rhoNew, normaStep._2)
+        expect(c.io.sign, normaStep._3)
       }
     }
 
     val myRand = new Random
     val fracWidth = myRand.nextInt(24) + 1
-    val bitWidth = myRand.nextInt(24) + fracWidth + 4
+    val bitWidth = scala.math.min(myRand.nextInt(24) + fracWidth + 4, 31)
     println("val fracWidth = " + fracWidth)
     println("val bitWidth = " + bitWidth)
     chiselMainTest(Array("--genHarness", "--compile", "--test", "--backend", "c"), () => {
@@ -198,10 +200,10 @@ class NormaStageSuite extends TestSuite {
         poke(c.io.zp, zp)
         poke(c.io.wD, wD)
         poke(c.io.forget, forget)
-        poke(c.io.forceNA, Bool(forceNA).litValue())
+        poke(c.io.forceNA, forceNA)
         if (c.NORMAtype == 1) {
           val c_C = c.io.asInstanceOf[IOBundle_C]
-          poke(c_C.yC, Bool(yC == 1).litValue())
+          poke(c_C.yC, yC == 1)
         }
         if (c.NORMAtype == 3) {
           val c_R = c.io.asInstanceOf[IOBundle_R]
@@ -212,73 +214,53 @@ class NormaStageSuite extends TestSuite {
         poke(c.io.etapos, etapos)
         poke(c.io.etaneg, etaneg)
 
-        var ft = ((forget*sum) >> c.fracWidth) + ((forget*wD) >> c.fracWidth)
+        val sumForceNA = { if ( forceNA ) sum else ((forget*sum) >> c.fracWidth) }
+        val wdForceNA = { if ( forceNA ) wD else ((forget*wD) >> c.fracWidth) }
+        var ft = sumForceNA + wdForceNA
         if (addToDict) {
           val tmpA = (alpha * zp) >> c.fracWidth
-          val tmpB = (forget * sum) >> c.fracWidth
+          val tmpB = sumForceNA
           ft = (tmpA + tmpB)
         }
-        val ftNov = ft - rho
         // compute expected alpha and addToDict
         addToDict = false
         alpha = BigInt(0)
         if (c.NORMAtype == 1) {
-          var testCond = rho - yC*(ft + b)
-          // dodgy hack incase overflowed into sign bit
-          if (testCond > (1 << (c.bitWidth-1)))
-            testCond = BigInt(-1)
+          val normaStep = normaCStep( rhoOld, yC, ft, bOld, eta,
+            etanu1, etanu, c.bitWidth )
           alpha = yC*eta
-          if (testCond > BigInt(0)) {
-            b = b + yC*eta
-            rho = rho + etanu1
-            addToDict = true
-          } else
-            rho = rho + etanu
+          addToDict = normaStep._1
+          b = normaStep._2
+          rho = normaStep._3
         } else if (c.NORMAtype == 2) {
-          var testCond = rho - ft
-          // dodgy hack incase overflowed into sign bit
-          if (testCond > (1 << (c.bitWidth-1)))
-            testCond = BigInt(-1)
+          val normaStep = normaNStep( rhoOld, ft, etanu1, etanu, c.bitWidth )
           alpha = eta
-          if (testCond > 0) {
-            addToDict = true
-            rho = rho + etanu1
-          } else
-            rho = rho + etanu
+          addToDict = normaStep._1
+          rho = normaStep._2
         } else {
-          val isPos = (yReg > ft)
-          var testCond = {
-            if (isPos)
-              yReg - ft - rho
-            else
-              ft - yReg - rho
-          }
-          if (isPos)
+          val normaStep = normaRStep( rhoOld, yReg, ft, etanu1, etanu, c.bitWidth )
+          addToDict = normaStep._1
+          rho = normaStep._2
+          if ( normaStep._3 )
             alpha = etapos
           else
             alpha = etaneg
-          if (testCond > (1 << (c.bitWidth-1)))
-            testCond = BigInt(-1)
-          if (testCond > 0) {
-            addToDict = true
-            rho = rho - etanu1
-          } else
-            rho = rho - etanu
         }
         // ft is different for novelty
         if (c.NORMAtype == 2)
-          ft = ftNov
+          ft = ft - rhoOld
         if (forceNA){
           addToDict = false
           rho = rhoOld
           b = bOld
         }
+        println("rhoOld = " + rhoOld + ", rho = " + rho)
         rhoOld = rho
         bOld = b
 
         // Clock and read outputs
         step(1)
-        expect(c.io.addToDict, Bool(addToDict).litValue())
+        expect(c.io.addToDict, addToDict)
         expect(c.io.ft, ft)
         expect(c.io.alpha, alpha)
       }
@@ -286,7 +268,7 @@ class NormaStageSuite extends TestSuite {
 
     val myRand = new Random
     val fracWidth = myRand.nextInt(24) + 1
-    val bitWidth = myRand.nextInt(24) + fracWidth + 4
+    val bitWidth = scala.math.min(myRand.nextInt(24) + fracWidth + 4, 31)
     val NORMAType = myRand.nextInt(3) + 1
     println("val fracWidth = " + fracWidth)
     println("val bitWidth = " + bitWidth)

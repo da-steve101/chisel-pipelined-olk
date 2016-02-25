@@ -121,11 +121,11 @@ class SumL(val bitWidth : Int, val fracWidth : Int, val stages : Int, val isNORM
   io.zp1 := stageAry(stages - 1)(1)
 
   // Calculate the sum if the example is added each cycle
-  sumLStages(0) := Mux(io.addToDict, io.alpha*%io.z(stages + 1), ZERO)
+  sumLStages(0) := Mux(io.addToDict && !io.forceNA, io.alpha*%io.z(stages + 1), ZERO)
   for (a <- 1 until stages) {
     if ( isNORMA ) {
-      val forceNAMux = Mux(io.forceNA, sumLStages(a - 1), io.forget*%sumLStages(a - 1))
-      sumLStages(a) := Mux(io.addToDict, io.alpha*%stageAry(a - 1)(stages + 1 - a) + io.forget*%sumLStages(a - 1), forceNAMux)
+      val sumLForceNA = Mux(io.forceNA, sumLStages(a - 1), io.forget*%sumLStages(a - 1))
+      sumLStages(a) := Mux(io.addToDict && !io.forceNA, io.alpha*%stageAry(a - 1)(stages + 1 - a) + io.forget*%sumLStages(a - 1), sumLForceNA)
     } else
       sumLStages(a) := Mux(io.addToDict, io.alpha*%stageAry(a - 1)(stages + 1 - a) + io.forget*%sumLStages(a - 1), sumLStages(a - 1))
   }
