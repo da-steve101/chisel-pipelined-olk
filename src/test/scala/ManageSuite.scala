@@ -16,95 +16,95 @@ class ManageSuite extends TestSuite {
 
       val forceNAexpect = new ArrayBuffer[Boolean]()
       val yCexpect      = new ArrayBuffer[Boolean]()
-      val yRegexpect    = new ArrayBuffer[Int]()
+      val yRegexpect    = new ArrayBuffer[BigInt]()
       for (i <- 1 until c.stages){
         forceNAexpect += true
         yCexpect      += true
-        yRegexpect    += 0
+        yRegexpect    += BigInt(0)
       }
 
-      var etanuOld = 0
+      var etanuOld = BigInt(0)
       for (i <- 0 until cycles) {
-        val forceNAin  = (r.nextInt(2) == 1)
+        val forceNAin  = (r.nextInt(5) == 1)
 
         val yCin      = (r.nextInt(2) == 1)
-        val yRegin    = r.nextInt(1 << (c.bitWidth/2))
-        val forgetin  = r.nextInt(1 << (c.bitWidth/2))
+        val yRegin    = BigInt( r.nextInt(1 << (c.bitWidth/2)) )
+        val forgetin  = BigInt( r.nextInt(1 << (c.bitWidth/2)) )
 
         // For NORMA
-        val eta    = r.nextInt(1 << (c.bitWidth/2))
-        val nu     = r.nextInt(1 << (c.bitWidth/2))
+        val eta    = BigInt( r.nextInt(1 << (c.bitWidth/2)) )
+        val nu     = BigInt( r.nextInt(1 << (c.bitWidth/2)) )
 
         // For OLK
-        val fracCin  = r.nextInt(1 << (c.bitWidth/2))
-        val epsilon  = r.nextInt(1 << (c.bitWidth/2))
+        val fracCin  = BigInt( r.nextInt(1 << (c.bitWidth/2)) )
+        val epsilon  = BigInt( r.nextInt(1 << (c.bitWidth/2)) )
 
         forceNAexpect += forceNAin
         yCexpect += yCin
         yRegexpect += yRegin
 
-        poke(c.io.forceNAin, Bool(forceNAin).litValue())
-        poke(c.io.forgetin, BigInt(forgetin))
+        poke(c.io.forceNAin, forceNAin)
+        poke(c.io.forgetin, forgetin)
 
         if ( c.isNORMA ) {
           val normaIO = c.io.asInstanceOf[NORMAIOBundle]
-          poke(normaIO.eta, BigInt(eta))
-          poke(normaIO.nu,  BigInt(nu))
+          poke(normaIO.eta, eta)
+          poke(normaIO.nu,  nu)
           if ( c.appType == 1 ) {
             val normacIO = normaIO.asInstanceOf[NORMAcIOBundle]
-            poke(normacIO.yCin, Bool(yCin).litValue())
+            poke(normacIO.yCin, yCin)
           }
           if ( c.appType == 3 ) {
             val normarIO = normaIO.asInstanceOf[NORMArIOBundle]
-            poke(normarIO.yRegin, BigInt(yRegin))
+            poke(normarIO.yRegin, yRegin)
           }
         } else {
           val olkIO = c.io.asInstanceOf[OLKIOBundle]
-          poke(olkIO.fracCin, BigInt(fracCin))
+          poke(olkIO.fracCin, fracCin)
           if ( c.appType == 1 ) {
             val olkcIO = olkIO.asInstanceOf[OLKcIOBundle]
-            poke(olkcIO.yCin, Bool(yCin).litValue())
+            poke(olkcIO.yCin, yCin)
           }
           if ( c.appType == 3 ) {
             val olkrIO = olkIO.asInstanceOf[OLKrIOBundle]
-            poke(olkrIO.epsilon, BigInt(epsilon))
-            poke(olkrIO.yRegin,  BigInt(yRegin))
+            poke(olkrIO.epsilon, epsilon)
+            poke(olkrIO.yRegin,  yRegin)
           }
         }
 
         step(1)
 
         if ( i >= c.stages - 1 ) {
-          expect(c.io.forceNAout, Bool(forceNAexpect(i)).litValue())
-          expect(c.io.forgetout, BigInt(forgetin))
+          expect(c.io.forceNAout, forceNAexpect(i))
+          expect(c.io.forgetout, forgetin)
 
           if ( c.isNORMA ) {
             val normaIO = c.io.asInstanceOf[NORMAIOBundle]
-            expect(normaIO.etapos, BigInt(eta))
-            expect(normaIO.etaneg, BigInt(-eta))
-            expect(normaIO.etanu,  BigInt((eta*nu) >> c.fracWidth))
-            expect(normaIO.etanu1, BigInt( etanuOld - eta ))
+            expect(normaIO.etapos, eta )
+            expect(normaIO.etaneg, -eta )
+            expect(normaIO.etanu,  (eta*nu) >> c.fracWidth )
+            expect(normaIO.etanu1, etanuOld - eta )
 
             if ( c.appType == 1 ) {
               val normacIO = normaIO.asInstanceOf[NORMAcIOBundle]
-              expect(normacIO.yCout, Bool(yCexpect(i)).litValue())
+              expect(normacIO.yCout, yCexpect(i) )
             }
             if ( c.appType == 3 ) {
               val normarIO = normaIO.asInstanceOf[NORMArIOBundle]
-              expect(normarIO.yRegout, BigInt(yRegexpect(i)))
+              expect(normarIO.yRegout, yRegexpect(i) )
             }
           } else {
             val olkIO = c.io.asInstanceOf[OLKIOBundle]
-            expect(olkIO.fracCout, BigInt(fracCin))
+            expect(olkIO.fracCout, fracCin )
 
             if ( c.appType == 1 ) {
               val olkcIO = olkIO.asInstanceOf[OLKcIOBundle]
-              expect(olkcIO.yCout, Bool(yCexpect(i)).litValue())
+              expect(olkcIO.yCout, yCexpect(i) )
             }
             if ( c.appType == 3 ) {
               val olkrIO = olkIO.asInstanceOf[OLKrIOBundle]
-              expect(olkrIO.yepos, BigInt(yRegexpect(i) - epsilon))
-              expect(olkrIO.yeneg, BigInt(- (yRegexpect(i) + epsilon)))
+              expect(olkrIO.yepos, yRegexpect(i) - epsilon )
+              expect(olkrIO.yeneg, - (yRegexpect(i) + epsilon) )
             }
           }
         }

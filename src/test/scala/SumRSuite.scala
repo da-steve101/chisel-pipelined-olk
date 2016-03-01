@@ -22,13 +22,13 @@ class SumRSuite extends TestSuite {
       val cycles = 3*(c.activeStages + 2)
 
       val addToDicts = ArrayBuffer.fill(cycles + c.activeStages + 1){ r.nextInt(2) == 1}
-      val sumRAry = ArrayBuffer.fill(c.activeStages - 1){0}
-      val wDAry   = ArrayBuffer.fill(c.activeStages - 1){0}
-      val wD1Ary  = ArrayBuffer.fill(c.activeStages - 1){0}
+      val sumRAry = ArrayBuffer.fill(c.activeStages - 1){ BigInt(0) }
+      val wDAry   = ArrayBuffer.fill(c.activeStages - 1){ BigInt(0) }
+      val wD1Ary  = ArrayBuffer.fill(c.activeStages - 1){ BigInt(0) }
       
       for (cyc <- 0 until cycles) {
-        val inVI     = ArrayBuffer.fill(c.dictionarySize){r.nextInt(1 << c.fracWidth)}
-        val inAlphaI = ArrayBuffer.fill(c.dictionarySize){r.nextInt(1 << c.fracWidth)}
+        val inVI     = ArrayBuffer.fill(c.dictionarySize){BigInt(r.nextInt(1 << c.fracWidth))}
+        val inAlphaI = ArrayBuffer.fill(c.dictionarySize){BigInt(r.nextInt(1 << c.fracWidth))}
 
         val wi = (inVI zip inAlphaI).map(pair => { (pair._1 * pair._2) >> c.fracWidth })
         val totalAdded = addToDicts.drop(cyc).take(c.activeStages).count(_ == true)
@@ -37,17 +37,17 @@ class SumRSuite extends TestSuite {
         wDAry  += wi(wi.length - 1 - totalAdded)
         wD1Ary += wi(wi.length - 2 - totalAdded)
 
-        poke(c.io.addToDict, Bool(addToDicts(cyc)).litValue())
+        poke(c.io.addToDict, addToDicts(cyc))
         for (i <- 0 until c.dictionarySize) {
-          poke(c.io.vi(i), BigInt(inVI(i)))
-          poke(c.io.alphai(i), BigInt(inAlphaI(i)))
+          poke(c.io.vi(i), inVI(i))
+          poke(c.io.alphai(i), inAlphaI(i))
         }
 
         step(1)
         if (cyc >= c.activeStages - 1) {
-          expect(c.io.sumR, BigInt(sumRAry(cyc)))
-          expect(c.io.wD, BigInt(wDAry(cyc)))
-          expect(c.io.wD1, BigInt(wD1Ary(cyc)))
+          expect(c.io.sumR, sumRAry(cyc))
+          expect(c.io.wD, wDAry(cyc))
+          expect(c.io.wD1, wD1Ary(cyc))
         }
       }
     }

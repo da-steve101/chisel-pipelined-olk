@@ -20,26 +20,27 @@ class SumStageSuite extends TestSuite {
       val activeStages = c.stages.count(_ == true)
 
       val cycles     = 2*c.stages.length
-      val expectSum  = ArrayBuffer.fill(activeStages - 1)(0)
-      val expectzp   = ArrayBuffer.fill(activeStages - 1)(0)
-      val expectzp1  = ArrayBuffer.fill(activeStages - 1)(0)
-      val expectwD   = ArrayBuffer.fill(activeStages - 1)(0)
-      val expectwD1  = ArrayBuffer.fill(activeStages - 1)(0)
-      val sumLAry   = ArrayBuffer.fill(activeStages - 1)(0)
-      val sumRAry   = ArrayBuffer.fill(activeStages - 1)(0)
-      val wd1Ary    = ArrayBuffer.fill(activeStages - 1)(0)
+      val expectSum  = ArrayBuffer.fill(activeStages - 1)( BigInt(0) )
+      val expectzp   = ArrayBuffer.fill(activeStages - 1)( BigInt(0) )
+      val expectzp1  = ArrayBuffer.fill(activeStages - 1)( BigInt(0) )
+      val expectwD   = ArrayBuffer.fill(activeStages - 1)( BigInt(0) )
+      val expectwD1  = ArrayBuffer.fill(activeStages - 1)( BigInt(0) )
+      val sumLAry   = ArrayBuffer.fill(activeStages - 1)( BigInt(0) )
+      val sumRAry   = ArrayBuffer.fill(activeStages - 1)( BigInt(0) )
+      val wd1Ary    = ArrayBuffer.fill(activeStages - 1)( BigInt(0) )
       val addToDicts = ArrayBuffer.fill(cycles + activeStages){ r.nextInt(2) == 1}
-      val alpha      = ArrayBuffer.fill(cycles + activeStages){r.nextInt(1 << ((2*c.fracWidth)/3))}
-      val forget     = r.nextInt(1 << c.fracWidth)
-      poke(c.io.forget, BigInt(forget))
+      val alpha      = ArrayBuffer.fill(cycles + activeStages){ BigInt( r.nextInt(1 << ((2*c.fracWidth)/3)) ) }
+      val forget     = BigInt( r.nextInt(1 << c.fracWidth) )
+      poke(c.io.forget, forget)
+      poke( c.io.forceNA, false )
 
       for (cyc <- 0 until cycles) {
-        val alphai = ArrayBuffer.fill(c.dictSize)(r.nextInt(1 << ((2*c.fracWidth)/3)))
-        val zi     = ArrayBuffer.fill(activeStages + 1)(r.nextInt(1 << ((2*c.fracWidth)/3)))
-        val vi     = ArrayBuffer.fill(c.dictSize)(r.nextInt(1 << ((2*c.fracWidth)/3)))
+        val alphai = ArrayBuffer.fill(c.dictSize)( BigInt( r.nextInt(1 << ((2*c.fracWidth)/3)) ) )
+        val zi     = ArrayBuffer.fill(activeStages + 1)( BigInt( r.nextInt(1 << ((2*c.fracWidth)/3)) ) )
+        val vi     = ArrayBuffer.fill(c.dictSize)( BigInt( r.nextInt(1 << ((2*c.fracWidth)/3)) ) )
 
         val forgetPowQ = {
-          var sum = 1 << c.fracWidth
+          var sum = BigInt( 1 << c.fracWidth )
           for (i <- 0 until (activeStages - 1)){
             if ( c.isNORMA ) {
               sum = (forget*sum) >> c.fracWidth
@@ -65,7 +66,7 @@ class SumStageSuite extends TestSuite {
         val sumR = wi.dropRight(totalAdd + 2).sum
         val sumLAry = ui.drop(2)
 
-        var sumL = 0
+        var sumL = BigInt(0)
         for ( i <- 0 until sumLAry.length ) {
           if ( addToDicts(cyc + i) )
             sumL =  ((forget*sumL) >> c.fracWidth) + sumLAry(sumLAry.length - 1 - i)
@@ -95,20 +96,17 @@ class SumStageSuite extends TestSuite {
             sumL + ((forgetPowQ*(sumR + expectwD1(cyc + activeStages - 1))) >> c.fracWidth)
         }
 
-        poke(c.io.addToDict, Bool(addToDicts(cyc)).litValue())
-        poke(c.io.alpha, BigInt(alpha(cyc)))
-        for (d <- 0 until c.dictSize) {
-          poke(c.io.alphai(d), BigInt(alphai(d)))
-          poke(c.io.vi(d), BigInt(vi(d)))
-        }
-        for (s <- 0 until (activeStages + 1))
-          poke(c.io.zi(s), zi(s))
+        poke(c.io.addToDict, addToDicts(cyc) )
+        poke(c.io.alpha, alpha(cyc) )
+        poke(c.io.alphai, alphai.toArray )
+        poke(c.io.vi, vi.toArray )
+        poke(c.io.zi, zi.toArray)
 
         step(1)
         if ( cyc > 2 ) {
-          expect(c.io.sum, BigInt(expectSum(cyc)))
-          expect(c.io.zp, BigInt(expectzp(cyc)))
-          expect(c.io.wD, BigInt(expectwD(cyc)))
+          expect(c.io.sum, expectSum(cyc) )
+          expect(c.io.zp, expectzp(cyc) )
+          expect(c.io.wD, expectwD(cyc) )
         }
       }
     }

@@ -14,7 +14,7 @@ class DictSuite extends TestSuite {
       val zero = BigInt(0)
       poke(c.io.alpha, zero)
       poke(c.io.forget, one)
-      poke(c.io.addToDict, Bool(false).litValue())
+      poke(c.io.addToDict, false)
       for (p <- 0 until c.pipelineStages){
         for (f <- 0  until c.features)
           poke(c.io.example(f), one + BigInt(p))
@@ -30,12 +30,12 @@ class DictSuite extends TestSuite {
       // Pipeline now full, test dict
       poke(c.io.alpha, one)      // 1
       poke(c.io.forget, one/2) // 0.5
-        poke(c.io.addToDict, Bool(true).litValue())
+      poke(c.io.addToDict, true)
       for (p <- 0 until c.pipelineStages) {
         var pVal = p
         if (p > (c.pipelineStages - 4)) {
           // in the last case test if the example is not added
-          poke(c.io.addToDict, Bool(false).litValue())
+          poke(c.io.addToDict, false)
           pVal = (c.pipelineStages - 4)
         }
         step(1)
@@ -53,12 +53,19 @@ class DictSuite extends TestSuite {
         }
       }
     }
+    /*
     val myRand = new Random
     val fracWidth = myRand.nextInt(24) + 1
     val bitWidth = myRand.nextInt(24) + fracWidth
     val dictSize = myRand.nextInt(300) + 1
     val features = myRand.nextInt(32) + 1
     val stages = myRand.nextInt(20) + 2
+     */
+    val fracWidth = 9
+    val bitWidth = 17
+    val dictSize = 273
+    val features = 18
+    val stages = 10
     println("val fracWidth = " + fracWidth)
     println("val bitWidth = " + bitWidth)
     println("val dictSize = " + dictSize)

@@ -297,7 +297,7 @@ object Top extends stageCalc {
       var calcStage = sStages.length - 1
       while(sStages.length != calcStage) {
         sStages = sStages.dropRight(1)
-        calcStage = calculatedStages(dictSize, sStages.count(_ == true), sStages)
+        calcStage = calculatedStages(dictSize, sStages)
         if (calcStage > sStages.length)
           sStages.appendAll(ArrayBuffer.fill(calcStage - sStages.length){ r.nextInt(2) == 1 })
       }

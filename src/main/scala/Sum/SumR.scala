@@ -60,16 +60,16 @@ import scala.collection.mutable.ArrayBuffer
   */
 
 trait stageCalc { 
-  def calculatedStages(dictionarySize : Int, activeStages : Int, stages : ArrayBuffer[Boolean]) : Int = {
-    var layerCount = dictionarySize - activeStages - 2
+  def calculatedStages(dictionarySize : Int, stages : ArrayBuffer[Boolean]) : Int = {
+    var layerCount = dictionarySize - stages.count(_ == true) - 2
     var sum = 1
     var i = 0
     while ( layerCount > 1 ) {
+      layerCount = (layerCount >> 1) + (layerCount & 1)
       if ( i < stages.length ) {
         if ( stages(i) )
           layerCount += 1
       }
-      layerCount = (layerCount >> 1) + (layerCount & 1)
       sum += 1
       i += 1
     }

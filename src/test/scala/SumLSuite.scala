@@ -54,11 +54,10 @@ class SumLSuite extends TestSuite {
         val mult = (z.drop(2).reverse zip alpha.drop(cyc).take(c.stages)).map( pair => { (pair._1 * pair._2) >> c.fracWidth } )
         var sumL = BigInt(0)
         for ( i <- 0 until mult.length ) {
-          var tmp = mult(i)
           if ( !forceNAs(cyc + i) ) {
             sumL = (forget*sumL) >> c.fracWidth
             if ( addToDicts(cyc + i) )
-              sumL = sumL + tmp
+              sumL = sumL + mult(i)
           }
         }
         expectedSumL += sumL
@@ -66,9 +65,7 @@ class SumLSuite extends TestSuite {
         poke(c.io.alpha, alpha(cyc))
         poke(c.io.addToDict, addToDicts(cyc))
         poke(c.io.forceNA, forceNAs(cyc))
-
-        for (s <- 0 until (c.stages + 2))
-          poke(c.io.z(s), z(s))
+        poke(c.io.z, z.toArray)
 
         step(1)
 
@@ -81,10 +78,9 @@ class SumLSuite extends TestSuite {
         }
       }
     }
-
     val myRand = new Random
     val fracWidth = myRand.nextInt(24) + 1
-    val bitWidth = myRand.nextInt(24) + fracWidth + 4
+    val bitWidth = scala.math.min(myRand.nextInt(24) + fracWidth + 4, 31)
     val stages = myRand.nextInt(50) + 2
     val isNORMA = true
     println("val fracWidth = " + fracWidth)
