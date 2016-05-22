@@ -25,7 +25,8 @@ import scala.collection.mutable.ArrayBuffer
 import com.github.tototoshi.csv._
 import scala.util.control.Breaks._
 
-class NORMATests(c : NORMA) extends Tester(c) {
+class NORMATests(c : NORMA, paramFilename : String, inputFilename : String,
+  outputFilename : String) extends Tester(c) {
   // Generate Table for linear interpolation
   /*  val gradients   = new ArrayBuffer[Int]()
    val offsets     = new ArrayBuffer[Int]()
@@ -77,11 +78,11 @@ class NORMATests(c : NORMA) extends Tester(c) {
   //  val r = scala.util.Random
 
   // read parameters
-  val reader = CSVReader.open(new java.io.File(c.paramFilename))
+  val reader = CSVReader.open(new java.io.File(paramFilename))
   val lines = reader.all
   reader.close
-  Predef.assert(lines.length >= 3, "Insufficient lines in parameter file " + c.paramFilename)
-  Predef.assert(lines(2).length <= 4, "Insufficient number of parameters in line 3 of parameter file " + c.paramFilename)
+  Predef.assert(lines.length >= 3, "Insufficient lines in parameter file " + paramFilename)
+  Predef.assert(lines(2).length <= 4, "Insufficient number of parameters in line 3 of parameter file " + paramFilename)
   val gamma  = tryToFixed(lines(2)(0), "Could not cast gamma = "  + lines(2)(0) + " to a double or int")
   val forget = tryToFixed(lines(2)(1), "Could not cast forget = " + lines(2)(1) + " to a double or int")
   val eta    = tryToFixed(lines(2)(2), "Could not cast eta = "    + lines(2)(2) + " to a double or int")
@@ -155,14 +156,14 @@ class NORMATests(c : NORMA) extends Tester(c) {
   var numFeatures = -1
 
   // Open input and output files for reading and writing respectively
-  checkFile(c.inputFilename, "csv")
-  Predef.assert(c.outputFilename.substring(c.outputFilename.lastIndexOf(".") + 1) == "csv",
-    "File " + c.outputFilename + " must have extension of .csv")
-  val inputReader   = CSVReader.open(new java.io.File(c.inputFilename))
+  checkFile(inputFilename, "csv")
+  Predef.assert(outputFilename.substring(outputFilename.lastIndexOf(".") + 1) == "csv",
+    "File " + outputFilename + " must have extension of .csv")
+  val inputReader   = CSVReader.open(new java.io.File(inputFilename))
   val inputIterator = inputReader.iterator
-  val outputWriter  = CSVWriter.open(new java.io.File(c.outputFilename))
+  val outputWriter  = CSVWriter.open(new java.io.File(outputFilename))
   outputWriter.writeAll(lines.take(3)) // Write parameters to output so a record is attached
-  outputWriter.writeRow(List(c.inputFilename))
+  outputWriter.writeRow(List(inputFilename))
 
   while ( inputIterator.hasNext ) {
     val inputExLine = inputIterator.next
@@ -354,8 +355,8 @@ object Top extends stageCalc {
           }).to[ArrayBuffer]
 
           chiselMainTest(runArgs, () => Module(
-            new NORMA(bitWidth, fracWidth, stages, log2Table, dictSize, features, appType, paramFilename, inputFilename, outputFilename))
-          ) { c => new NORMATests(c) }
+            new NORMA(bitWidth, fracWidth, stages, log2Table, dictSize, features, appType ))
+          ) { c => new NORMATests(c, paramFilename, inputFilename, outputFilename ) }
 
         }
       }
