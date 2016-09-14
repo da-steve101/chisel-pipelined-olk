@@ -238,7 +238,7 @@ class NORMATests(c : NORMA, paramFilename : String, inputFilename : String,
      */
 
     // Send values
-    poke(c.io.forceNA, Bool(forceNA).litValue())
+    poke(c.io.forceNA, forceNA)
       (c.io.example zip example).map(pair => { poke(pair._1, pair._2) } )
     if (c.appType == 1) {
       val NORMAcIO = c.io.asInstanceOf[IOBundle_C]
@@ -253,15 +253,17 @@ class NORMATests(c : NORMA, paramFilename : String, inputFilename : String,
     // Expect output
     // expect(c.io.ft, BigInt(expectedFt(cyc)))
     // put Output into file
+    val ftOut = (fromPeek(peek(c.io.ft)).toDouble / ONE)
     if ( cyc >= (c.pCycles - 1))
-      outputWriter.writeRow(List(peek(c.io.addToDict) == 1, (expectedyReg(cyc).toDouble / ONE), (fromPeek(peek(c.io.ft)).toDouble / ONE)))
+      outputWriter.writeRow(List(peek(c.io.addToDict) == 1, (expectedyReg(cyc).toDouble / ONE), f"$ftOut%1.6f"))
 
     cyc += 1
   }
   // Push the last few through the pipeline
   for ( i <- 0 until (c.pCycles - 1) ) {
     step(1)
-    outputWriter.writeRow(List(peek(c.io.addToDict) == 1, (expectedyReg(cyc + i).toDouble / ONE), (fromPeek(peek(c.io.ft)).toDouble / ONE)))
+    val ftOut = (fromPeek(peek(c.io.ft)).toDouble / ONE)
+    outputWriter.writeRow(List(peek(c.io.addToDict) == 1, (expectedyReg(cyc + i).toDouble / ONE), f"$ftOut%1.6f" ))
   }
   inputReader.close()
   outputWriter.close()
