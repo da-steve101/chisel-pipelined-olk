@@ -53,7 +53,8 @@ class IOBundle_R(bitWidth : Int, fracWidth : Int, features : Int) extends IOBund
 }
 
 class NORMA(val bitWidth : Int, val fracWidth : Int, val stages : ArrayBuffer[Boolean], val log2Table : Int,
-  val dictionarySize : Int, val features : Int, val appType : Int, clk : Option[Clock] = None ) extends Module( _clock = clk ) {
+  val dictionarySize : Int, val features : Int, val appType : Int, clk : Option[Clock] = None,
+  rst: Option[Bool] = None) extends Module( _clock = clk, _reset = rst ) {
 
   Predef.assert(fracWidth > log2Table, "Frac width too small or table too big")
 
